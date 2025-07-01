@@ -1,11 +1,23 @@
-﻿// MessageBrokerDemo.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
+﻿// ClientApp1.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
 //
 
 #include <iostream>
+#include "..\IPC\IPCClient.h"
+
+void OnClientMessage(void* msg)
+{
+
+}
 
 int main()
 {
-    std::cout << "Hello World!\n";
+    IPCClient client(0xF001);
+
+    client.Connect("123", OnClientMessage);
+
+    client.RegisterMessage(0x0001);
+
+    client.Disconnect();
 }
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
