@@ -347,7 +347,8 @@ void CNamedPipeServer::OnMessage(DWORD pipeIndex)
 {
 	if (m_pOnMessage != NULL)
 	{
-		m_pOnMessage(pipeIndex, m_instPipes[pipeIndex].mRequestBuffer.get());
+        void* msgData = m_instPipes[pipeIndex].mRequestBuffer.get()->AccessMem();
+		m_pOnMessage(pipeIndex, msgData);
 	}
 }
 

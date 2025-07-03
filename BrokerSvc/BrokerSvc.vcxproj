@@ -104,6 +104,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>..\3rd\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -118,6 +120,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>..\3rd\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -128,6 +132,26 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="BrokerSvc.cpp" />
+    <ClCompile Include="Log.cpp" />
+    <ClCompile Include="SvcEventHandler.cpp" />
+    <ClCompile Include="Util_Svc.cpp" />
+    <ClCompile Include="worker.cpp" />
+    <ClCompile Include="Worker_Broker.cpp" />
+    <ClCompile Include="Worker_IPC.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\IPC\IPC.vcxproj">
+      <Project>{36bf77a5-f133-480d-ae48-17bf5c3e0ae9}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Common.h" />
+    <ClInclude Include="Log.h" />
+    <ClInclude Include="SvcEventHandler.h" />
+    <ClInclude Include="Util_Svc.h" />
+    <ClInclude Include="worker.h" />
+    <ClInclude Include="Worker_Broker.h" />
+    <ClInclude Include="Worker_IPC.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

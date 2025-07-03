@@ -1,5 +1,12 @@
 #pragma once
 
+#include <memory>
+#include <iostream>
+
+//Destination IDs
+const unsigned short IPC_CONTROL   = 0;        // Control Message  
+const unsigned short IPC_BROADCAST = 0xFFFF;   // Broadcast to all clients
+
 struct IPCHeader
 {
     unsigned long   Signature;   // Signature for IPC messages
@@ -7,7 +14,7 @@ struct IPCHeader
     unsigned short  SrcId;      // Source ID
     unsigned short  DstId;      // Destination ID
     unsigned short  Type;       // Message type
-    unsigned short  DataSize;   // Size of the data
+    unsigned short  Size;       // Size of the total message
 
     IPCHeader()
         : Signature('IPCM'),
@@ -15,7 +22,7 @@ struct IPCHeader
         SrcId(0),
         DstId(0),
         Type(0),
-        DataSize(0)
+        Size(0)
     {
     }
 };
@@ -23,11 +30,53 @@ struct IPCHeader
 struct IpcMessage
 {
     IPCHeader header;
-    char Data[1];
+    unsigned char Data[2 * 4096 - sizeof(IPCHeader)];
+
+    IpcMessage(unsigned short srcId, unsigned short dstId, unsigned short msgType, void* data, unsigned short dataSize)
+    {
+        memset(Data, 0, sizeof(Data)); // Clear the data buffer
+
+        //header.Timestamp = GetTickCount(); // Set the timestamp to current tick count
+        header.SrcId = srcId; // Default source ID
+        header.DstId = dstId; // Default destination ID
+        header.Type = msgType; // Default message type
+
+        header.Size = dataSize + sizeof(IPCHeader); // Set the size of the data
+        if (dataSize > 0 && data != nullptr)
+        {
+            if (dataSize > sizeof(Data))
+            {
+                // Handle error: data size exceeds buffer size
+                throw std::runtime_error("Data size exceeds buffer size");
+            }
+            memcpy(Data, data, dataSize); // Copy the data into the message
+        }
+    }
+
+    bool IsValid()
+    {
+        // Check if the message is valid
+        if (header.Signature != 'IPCM') // Check signature
+        {
+            std::cerr << "Invalid IPC message signature: " << header.Signature << std::endl;
+            return false;
+        }
+        if (header.Size < sizeof(IPCHeader) || header.Size > sizeof(IpcMessage))
+        {
+            std::cerr << "Invalid IPC message size: " << header.Size << std::endl;
+            return false;
+        }
+        return true;
+    }
+
+    //~IpcMessage()
+    //{
+    //    if (Data)
+    //    {
+    //        delete[] Data; // Free the allocated memory for data
+    //        Data = nullptr;
+    //    }
+    //}
 };
 
-//Destination IDs
-const unsigned short IPC_DST_BROADCAST          = 0xFFFF;   // Broadcast to all clients
-const unsigned short IPC_DST_REGISTER_CLIENT    = 0x0000;   // Register client to a specific message type
-const unsigned short IPC_DST_REGISTER_MESSAGE   = 0x0001;   // Register message type
-
+typedef std::shared_ptr<IpcMessage> IpcMessagePtr;

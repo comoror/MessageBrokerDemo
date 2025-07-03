@@ -2,14 +2,30 @@
 //
 
 #include <iostream>
-#include "..\IPC\IPCBroker.h"
+#include "..\IPC\IPCServerBroker.h"
+
+int thread_broker()
+{
+    IPCServerBroker::GetInstance().RunBroker("\\\\.\\pipe\\123");
+    return 0;
+}
 
 int main()
 {
-    // Initialize the IPC server broker
-    IPCServerBroker::GetInstance().StartBroker("MyIPCServer");
+    std::thread t = std::thread(thread_broker);
 
-    std::cout << "Hello World!\n";
+    Sleep(3000);
+
+    IpcMessage msg(0xF001, IPC_BROADCAST, 0xF001, nullptr, 0);
+    IPCServerBroker::GetInstance().Broadcast(0xF001, &msg);
+
+    // Wait for user input to stop the broker
+    std::cout << "Press Enter to stop the IPC server broker..." << std::endl;
+    system("PAUSE");
+    IPCServerBroker::GetInstance().StopBroker();
+
+    if (t.joinable())
+        t.join();
 }
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单

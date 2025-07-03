@@ -35,24 +35,3 @@ public:
 private:
 	std::vector<BYTE> buffer_;
 };
-
-#ifdef _DEBUG
-#define DBG_LOG(fmt, ...) DbgPrintf("%hs(%d)!"##fmt, __FUNCTION__, __LINE__, __VA_ARGS__)
-#else
-#define DBG_LOG(fmt, ...)
-#endif
-
-#define DBG_INFO(fmt, ...) DBG_LOG(fmt, __VA_ARGS__)
-#define DBG_ERROR(fmt, ...) DBG_LOG(fmt, __VA_ARGS__)
-
-inline void DbgPrintf(const char* format, ...)
-{
-	va_list argList;
-	va_start(argList, format);
-
-	char szBuffer[1024] = { 0 };
-	vsprintf_s(szBuffer, format, argList);
-	va_end(argList);
-
-	OutputDebugStringA(szBuffer);
-}

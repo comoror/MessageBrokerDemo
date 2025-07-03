@@ -27,7 +27,7 @@
     <ClInclude Include="IPC.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="IPCBroker.h">
+    <ClInclude Include="IPCServerBroker.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="IPCClient.h">
@@ -58,6 +58,9 @@
     </ClCompile>
     <ClCompile Include="CNamedPipeServer.cpp">
       <Filter>CNamedPipe</Filter>
+    </ClCompile>
+    <ClCompile Include="IPCServerBroker.cpp">
+      <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

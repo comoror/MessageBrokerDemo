@@ -29,16 +29,13 @@ public:
     {
         if (pServer)
         {
-            pServer->SendData(index, msg, sizeof(IpcMessage) + msg->header.DataSize - 1);
+            pServer->SendData(index, msg, msg->header.Size);
         }
     }
 
     void Start()
     {
-        if (pServer)
-        {
-            pServer->Run();
-        }
+        pServer->Run();
     }
 
     void Stop()

@@ -57,7 +57,7 @@ public:
         if (pClient)
         {
             msg->header.SrcId = mClientId; // Set the source ID to the client's ID
-            pClient->SendData(msg, sizeof(IpcMessage) + msg->header.DataSize - 1);
+            pClient->SendData(msg, msg->header.Size);
         }
     }
 
@@ -65,12 +65,9 @@ public:
     {
         if (pClient)
         {
-            IpcMessage msg;
-            msg.header.SrcId = mClientId;
-            msg.header.DstId = IPC_DST_REGISTER_MESSAGE;
-            msg.header.Type = type;
-            msg.header.DataSize = 0;
-            pClient->SendData(&msg, sizeof(IpcMessage) + sizeof(type) - 1);
+            IpcMessage* pMsg = new IpcMessage(mClientId, 0, type, nullptr, 0);
+            pClient->SendData(pMsg, pMsg->header.Size);
+            delete pMsg; // Clean up the message after sending
         }
     }
 private:
@@ -81,12 +78,9 @@ private:
     {
         if (pClient)
         {
-            IpcMessage msg;
-            msg.header.SrcId = mClientId;
-            msg.header.DstId = IPC_DST_REGISTER_CLIENT;
-            msg.header.Type = clientId; // Use the client ID as the type
-            msg.header.DataSize = 0;
-            pClient->SendData(&msg, sizeof(IpcMessage) + sizeof(clientId) - 1);
+            IpcMessage* pMsg = new IpcMessage(mClientId, 0, 0, nullptr, 0);
+            pClient->SendData(pMsg, pMsg->header.Size);
+            delete pMsg; // Clean up the message after sending
         }
     }
 

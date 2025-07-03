@@ -102,7 +102,8 @@ DWORD CNamedPipeClient::Connect(LPCTSTR lpszPipeName, PPIPE_CLIENT_ON_MESSAGE pO
 	}
 
 	if (m_pOnConnect)
-	{
+    {
+        DBG_INFO("Client connected to pipe: %ws\n", lpszPipeName);
 		m_pOnConnect();
 	}
 
@@ -277,6 +278,6 @@ VOID CNamedPipeClient::OnMessage()
 {
 	if (m_pOnMessage)
 	{
-		m_pOnMessage(m_InBuffer.get());
+		m_pOnMessage(m_InBuffer.get()->AccessMem());
 	}
 }
