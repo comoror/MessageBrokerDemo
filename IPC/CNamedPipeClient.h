@@ -4,7 +4,7 @@
 
 typedef VOID(*PPIPE_CLIENT_ON_CONNECT) ();
 typedef VOID(*PPIPE_CLIENT_ON_DISCONNECT) ();
-typedef VOID(*PPIPE_CLIENT_ON_MESSAGE) (void* inBuf);
+typedef VOID(*PPIPE_CLIENT_ON_MESSAGE) (void* inBuf, size_t bufSize);
 
 class CNamedPipeClient
 {
@@ -22,10 +22,9 @@ public:
 private:
 	DWORD ReadPipe();
 
-	VOID OnMessage();
+	VOID OnMessage(LPVOID data, DWORD data_size);
 
 	BYTE						m_PipeReadBuffer[MAX_PIPE_BUFFER_SIZE] = { 0 };
-	std::unique_ptr<MemBuffer>	m_InBuffer;
 
 private:
 	HANDLE				m_hPipe = INVALID_HANDLE_VALUE;

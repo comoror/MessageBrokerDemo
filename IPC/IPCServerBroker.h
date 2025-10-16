@@ -3,7 +3,7 @@
 #include <map>
 #include <vector>
 #include <mutex>
-#include "IPC.h"
+#include "IPCMessage.h"
 #include "IPCServer.h"
 
 typedef struct
@@ -14,11 +14,9 @@ typedef struct
 
 class IPCServerBroker
 {
-private:
+public:
     IPCServerBroker();
     ~IPCServerBroker();
-    IPCServerBroker(const IPCServerBroker&) = delete;
-    IPCServerBroker& operator=(const IPCServerBroker&) = delete;
 
 private:
     IPCServer* server = nullptr;
@@ -35,19 +33,15 @@ private:
 
     void MessageRegister(unsigned long index, unsigned short type);
     void Send(unsigned long index, IpcMessage* msg);
+    void SendError(unsigned long index, unsigned short srcId, void* data, size_t data_size);
 
     static void OnServerConnect(unsigned long index);
     static void OnServerDisconnect(unsigned long index);
-    static void OnServerMessage(unsigned long index, VOID* msg);
+    static void OnServerMessage(unsigned long index, void* msg, size_t data_size);
 
 public:
-    static IPCServerBroker& GetInstance()
-    {
-        static IPCServerBroker instance;
-        return instance;
-    }
-
     void RunBroker(const char* serverName);
+    void RunBrokerAsync(const char* serverName);
     void StopBroker();
     void Broadcast(unsigned short type, IpcMessage* msg);
     void SendToClient(unsigned short dstId, IpcMessage* msg);

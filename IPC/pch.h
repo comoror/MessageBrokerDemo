@@ -11,8 +11,9 @@
 #include "framework.h"
 #include <windows.h>
 #include <stdio.h>
+#include <thread>
 
-#ifdef _DEBUG
+#ifndef _DEBUG
 #define DBG_LOG(fmt, ...) DbgPrintf("%hs(%d)!"##fmt, __FUNCTION__, __LINE__, __VA_ARGS__)
 #else
 #define DBG_LOG(fmt, ...)

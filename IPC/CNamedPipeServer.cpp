@@ -184,9 +184,6 @@ void CNamedPipeServer::GetPendingOperationResult(DWORD pipeIndex)
 				DBG_INFO("Read overlapped successfully completed: pipe %d, numBytesTransferred: %d\n", 
 					pipeIndex, numBytesTransferred);
 				m_instPipes[pipeIndex].mBytesRead = numBytesTransferred;
-				m_instPipes[pipeIndex].mRequestBuffer->ClearMemory();
-				m_instPipes[pipeIndex].mRequestBuffer->AddItem(m_instPipes[pipeIndex].mPipeReadBuffer,
-					m_instPipes[pipeIndex].mBytesRead);
 
 				OnMessage(pipeIndex);
 				ReadPipe(pipeIndex);
@@ -203,9 +200,6 @@ void CNamedPipeServer::GetPendingOperationResult(DWORD pipeIndex)
 		}
 		else if (m_instPipes[pipeIndex].mCurrentState == PipeStates::READING)
 		{
-			m_instPipes[pipeIndex].mRequestBuffer->ClearMemory();
-			m_instPipes[pipeIndex].mRequestBuffer->AddItem(m_instPipes[pipeIndex].mPipeReadBuffer,
-				m_instPipes[pipeIndex].mBytesRead);
 			OnMessage(pipeIndex);
 			ReadPipe(pipeIndex);
 		}
@@ -242,6 +236,7 @@ DWORD CNamedPipeServer::ReadPipe(DWORD pipeIndex)
 {
 	m_instPipes[pipeIndex].mCurrentState = PipeStates::READING;
 
+    memset(m_instPipes[pipeIndex].mPipeReadBuffer, 0, nMaxBufferSize);
 	BOOL success = ReadFile(m_instPipes[pipeIndex].mPipeInstance.get(), 
 		m_instPipes[pipeIndex].mPipeReadBuffer,
 		nMaxBufferSize, 
@@ -323,6 +318,13 @@ DWORD CNamedPipeServer::WritePipe(DWORD pipeIndex, LPVOID msg, size_t msg_size)
 			return lastError;
 		}
 	}
+	else
+	{
+		DBG_ERROR("WriteFile to pipe failed. GLE=%d: pipe %d\n", lastError, pipeIndex);
+		// An error occurred; disconnect from the client.
+		DisconnectAndReconnect(pipeIndex);
+		return lastError;
+	}
 
 	return 0;
 }
@@ -347,8 +349,10 @@ void CNamedPipeServer::OnMessage(DWORD pipeIndex)
 {
 	if (m_pOnMessage != NULL)
 	{
-        void* msgData = m_instPipes[pipeIndex].mRequestBuffer.get()->AccessMem();
-		m_pOnMessage(pipeIndex, msgData);
+        void* msgData = m_instPipes[pipeIndex].mPipeReadBuffer;
+		size_t msgSize = m_instPipes[pipeIndex].mBytesRead;
+        DBG_INFO("OnMessage: pipe %d, msgSize: %d\n", pipeIndex, msgSize);
+		m_pOnMessage(pipeIndex, msgData, msgSize);
 	}
 }
 

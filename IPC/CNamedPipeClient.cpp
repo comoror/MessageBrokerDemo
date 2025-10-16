@@ -1,7 +1,7 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "CNamedPipeClient.h"
 
-CNamedPipeClient::CNamedPipeClient() : m_InBuffer(std::make_unique<MemBuffer>())
+CNamedPipeClient::CNamedPipeClient()
 {
 	m_hEventExit = CreateEvent(NULL, TRUE, FALSE, NULL);
 	m_hEventRead = CreateEvent(NULL, TRUE/*Manual-Reset*/, FALSE, NULL);
@@ -141,23 +141,20 @@ DWORD CNamedPipeClient::Connect(LPCTSTR lpszPipeName, PPIPE_CLIENT_ON_MESSAGE pO
 						DBG_ERROR("GetOverlappedResult failed 2. numBytesTransferred: %d, GLE=%d\n", 
 							numBytesTransferred, GetLastError());
 						//break;
-						m_InBuffer->AddItem(m_PipeReadBuffer, numBytesTransferred);
-						OnMessage();
+						OnMessage(m_PipeReadBuffer, numBytesTransferred);
 					}
 					else
 					{
 						//completed
 						DBG_INFO("Read overlapped successfully completed, numBytesTransferred: %d.\n", numBytesTransferred);
-						m_InBuffer->AddItem(m_PipeReadBuffer, numBytesTransferred);
-						OnMessage();
+						OnMessage(m_PipeReadBuffer, numBytesTransferred);
 					}
 				}
 				else
 				{
 					//read completed
 					DBG_INFO("Read successfully completed.\n");
-					m_InBuffer->AddItem(m_PipeReadBuffer, MAX_PIPE_BUFFER_SIZE);
-					OnMessage();
+					OnMessage(m_PipeReadBuffer, MAX_PIPE_BUFFER_SIZE);
 				}
 			}
 		}
@@ -179,9 +176,26 @@ DWORD CNamedPipeClient::Disconnect()
 		SetEvent(m_hEventExit);
 	}
 
+	// 如果线程可 join，且不是在工作线程自身调用，则 join。
+    // 例如在 OnMessage 回调中调用 Disconnect，则不能 join 自己。
 	if (m_thread.joinable())
 	{
-		m_thread.join();
+		if (std::this_thread::get_id() != m_thread.get_id())
+		{
+			try
+			{
+				m_thread.join();
+			}
+			catch (const std::system_error& e)
+			{
+				DBG_ERROR("Thread join failed: %s\n", e.what());
+			}
+		}
+		else
+		{
+			// 在工作线程自身调用 Disconnect：不能 join 自己，直接返回，线程会自行退出。
+            m_thread.detach();
+		}
 	}
 
 	return 0;
@@ -244,7 +258,6 @@ DWORD CNamedPipeClient::SendData(LPVOID msg, DWORD msg_size)
 DWORD CNamedPipeClient::ReadPipe()
 {
 	memset(m_PipeReadBuffer, 0, MAX_PIPE_BUFFER_SIZE);
-	m_InBuffer->ClearMemory();
 
 	DWORD dwRead;
 	BOOL bRead = ReadFile(m_hPipe, m_PipeReadBuffer, MAX_PIPE_BUFFER_SIZE, &dwRead, &m_ovRead);
@@ -274,10 +287,10 @@ DWORD CNamedPipeClient::ReadPipe()
 	return 0;
 }
 
-VOID CNamedPipeClient::OnMessage()
+VOID CNamedPipeClient::OnMessage(LPVOID data, DWORD data_size)
 {
 	if (m_pOnMessage)
 	{
-		m_pOnMessage(m_InBuffer.get()->AccessMem());
+		m_pOnMessage(data, data_size);
 	}
 }

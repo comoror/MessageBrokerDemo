@@ -4,7 +4,7 @@
 
 typedef VOID (*PPIPE_SERVER_ON_CONNECT) (DWORD pipeIndex);
 typedef VOID (*PPIPE_SERVER_ON_DISCONNECT) (DWORD pipeIndex);
-typedef VOID (*PPIPE_SERVER_ON_MESSAGE) (DWORD pipeIndex, VOID* rqstBuf);
+typedef VOID (*PPIPE_SERVER_ON_MESSAGE) (DWORD pipeIndex, VOID* rqstBuf, SIZE_T bufSize);
 
 class CNamedPipeServer
 {
@@ -64,7 +64,7 @@ private:
 	class Pipe
 	{
 	public:
-		Pipe() : mRequestBuffer(std::make_unique<MemBuffer>()),	mResponseBuffer(std::make_unique<MemBuffer>()) {}
+		Pipe() {}
 
 		//delete copy constructor and assignment operator
 		Pipe(const Pipe&) = delete;
@@ -72,6 +72,24 @@ private:
 
 		DWORD CreatePipeInstance(LPCTSTR lpszPipeName)
 		{
+            //initialize the scurity descriptor
+            SECURITY_DESCRIPTOR sd = {};
+
+            // Initialize the security descriptor
+			if (!InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION))
+			{
+				return GetLastError();
+            }
+
+            // Set the security descriptor to allow all users to access the pipe
+            if (!SetSecurityDescriptorDacl(&sd, TRUE, NULL, FALSE))
+			{
+				return GetLastError();
+            }
+
+            //set security attributes to allow access from all users
+            SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), &sd, TRUE };
+
 			HANDLE hPipe = CreateNamedPipe(
 				lpszPipeName,
 				PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
@@ -80,7 +98,7 @@ private:
 				nMaxBufferSize,
 				nMaxBufferSize,
 				nPipeTimeout,
-				NULL);
+				&sa);
 			if (hPipe == INVALID_HANDLE_VALUE)
 			{
 				return GetLastError();
@@ -90,9 +108,6 @@ private:
 
 			return ERROR_SUCCESS;
 		}
-
-		std::unique_ptr<MemBuffer> mRequestBuffer;
-		std::unique_ptr<MemBuffer> mResponseBuffer;
 
 		std::unique_ptr<std::remove_pointer_t<HANDLE>, PipeInstanceDeleter>	mPipeInstance;
 

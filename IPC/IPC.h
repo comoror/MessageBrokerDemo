@@ -1,82 +1,38 @@
 #pragma once
 
-#include <memory>
-#include <iostream>
+typedef void (*PIPC_CLIENT_ON_CONNECT) ();
+typedef void (*PIPC_CLIENT_ON_DISCONNECT) ();
+typedef void (*PIPC_CLIENT_ON_MESSAGE) (void* inBuf, size_t bufSize);
 
-//Destination IDs
-const unsigned short IPC_CONTROL   = 0;        // Control Message  
-const unsigned short IPC_BROADCAST = 0xFFFF;   // Broadcast to all clients
-
-struct IPCHeader
+extern "C"
 {
-    unsigned long   Signature;   // Signature for IPC messages
-    unsigned long   Timestamp;   // Timestamp of the message
-    unsigned short  SrcId;      // Source ID
-    unsigned short  DstId;      // Destination ID
-    unsigned short  Type;       // Message type
-    unsigned short  Size;       // Size of the total message
+    //return: pointer to IPCClient instance, nullptr if failed
+    void* ipc_client_start(const char* pipe_name,
+        unsigned short client_id, 
+        PIPC_CLIENT_ON_MESSAGE onMessage,
+        PIPC_CLIENT_ON_CONNECT onConnect = nullptr,
+        PIPC_CLIENT_ON_DISCONNECT onDisconnect = nullptr);
 
-    IPCHeader()
-        : Signature('IPCM'),
-        Timestamp(0),
-        SrcId(0),
-        DstId(0),
-        Type(0),
-        Size(0)
-    {
-    }
-};
+    void ipc_client_stop(void* pClient);
 
-struct IpcMessage
-{
-    IPCHeader header;
-    unsigned char Data[2 * 4096 - sizeof(IPCHeader)];
+    int ipc_client_send(void* pClient,
+        unsigned short srcID,
+        unsigned short dstID,
+        unsigned short msgType,
+        void* data,
+        unsigned short data_len);
 
-    IpcMessage(unsigned short srcId, unsigned short dstId, unsigned short msgType, void* data, unsigned short dataSize)
-    {
-        memset(Data, 0, sizeof(Data)); // Clear the data buffer
+    int ipc_client_broadcast(void* pClient, 
+        unsigned short srcID,
+        unsigned short msgType,
+        void* data, 
+        unsigned short data_len);
 
-        //header.Timestamp = GetTickCount(); // Set the timestamp to current tick count
-        header.SrcId = srcId; // Default source ID
-        header.DstId = dstId; // Default destination ID
-        header.Type = msgType; // Default message type
+    int ipc_client_register_msg(void* pClient, 
+        unsigned short msgType);
 
-        header.Size = dataSize + sizeof(IPCHeader); // Set the size of the data
-        if (dataSize > 0 && data != nullptr)
-        {
-            if (dataSize > sizeof(Data))
-            {
-                // Handle error: data size exceeds buffer size
-                throw std::runtime_error("Data size exceeds buffer size");
-            }
-            memcpy(Data, data, dataSize); // Copy the data into the message
-        }
-    }
-
-    bool IsValid()
-    {
-        // Check if the message is valid
-        if (header.Signature != 'IPCM') // Check signature
-        {
-            std::cerr << "Invalid IPC message signature: " << header.Signature << std::endl;
-            return false;
-        }
-        if (header.Size < sizeof(IPCHeader) || header.Size > sizeof(IpcMessage))
-        {
-            std::cerr << "Invalid IPC message size: " << header.Size << std::endl;
-            return false;
-        }
-        return true;
-    }
-
-    //~IpcMessage()
-    //{
-    //    if (Data)
-    //    {
-    //        delete[] Data; // Free the allocated memory for data
-    //        Data = nullptr;
-    //    }
-    //}
-};
-
-typedef std::shared_ptr<IpcMessage> IpcMessagePtr;
+    //return: pointer to IPCServerBroker instance, nullptr if failed
+    void* ipc_broker_start(const char* pipe_name);
+    void* ipc_broker_start_async(const char* pipe_name);
+    void ipc_broker_stop(void* pBroker);
+}

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IPC.h"
+#include "IPCMessage.h"
 
 #ifdef _WIN32
 // For Windows platforms, you can use the CNamedPipeServer class from CNamedPipeIPC.h
@@ -12,41 +12,13 @@ public:
     bool Listen(const char* pipeName,
         PPIPE_SERVER_ON_MESSAGE onMessage,
         PPIPE_SERVER_ON_CONNECT onConnect,
-        PPIPE_SERVER_ON_DISCONNECT onDisconnect)
-    {
-#ifdef UNICODE
-        wchar_t pipeNameW[MAX_PATH];
-        mbstowcs_s(nullptr, pipeNameW, MAX_PATH, pipeName, _TRUNCATE);
-        pServer = new CNamedPipeServer(pipeNameW, onMessage, onConnect, onDisconnect);
-#else
-        pServer = new CNamedPipeServer((const char*)pipeName, onMessage, onConnect, onDisconnect);
-#endif
+        PPIPE_SERVER_ON_DISCONNECT onDisconnect);
 
-        return (pServer != nullptr) ? true : false;
-    }
+    void SendData(unsigned long index, IpcMessage* msg);
 
-    void SendData(unsigned long index, IpcMessage* msg)
-    {
-        if (pServer)
-        {
-            pServer->SendData(index, msg, msg->header.Size);
-        }
-    }
+    void Start();
 
-    void Start()
-    {
-        pServer->Run();
-    }
-
-    void Stop()
-    {
-        if (pServer)
-        {
-            pServer->Stop();
-            delete pServer;
-            pServer = nullptr;
-        }
-    }
+    void Stop();
 
 private:
     CNamedPipeServer* pServer = nullptr;

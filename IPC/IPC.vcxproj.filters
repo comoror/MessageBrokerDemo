@@ -24,7 +24,7 @@
     <ClInclude Include="pch.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="IPC.h">
+    <ClInclude Include="IPCMessage.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="IPCServerBroker.h">
@@ -45,6 +45,9 @@
     <ClInclude Include="CNamedPipeServer.h">
       <Filter>CNamedPipe</Filter>
     </ClInclude>
+    <ClInclude Include="IPC.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="IPC.cpp">
@@ -60,6 +63,12 @@
       <Filter>CNamedPipe</Filter>
     </ClCompile>
     <ClCompile Include="IPCServerBroker.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="IPCClient.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="IPCServer.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

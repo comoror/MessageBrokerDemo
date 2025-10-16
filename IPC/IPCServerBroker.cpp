@@ -61,7 +61,7 @@ void IPCServerBroker::ClientDelete(unsigned long index)
 }
 void IPCServerBroker::ClientUpdate(unsigned long index, unsigned short srcId)
 {
-    DBG_INFO("Client with index %lu updated.", index);
+    DBG_INFO("Client [%04d] with pipe index %lu updated.", srcId, index);
     std::lock_guard<std::mutex> lock(mMutex);
 
     auto it = std::find_if(mClients.begin(), mClients.end(),
@@ -82,6 +82,18 @@ void IPCServerBroker::MessageRegister(unsigned long index, unsigned short type)
         [index](const ClientInfo& client) { return client.ClientIndex == index; });
     if (it != mClients.end())
     {
+        auto msgIt = mMessages.find(type);
+        if(msgIt != mMessages.end())
+        {
+            // Check if client already registered for this message type
+            auto clientIt = std::find_if(msgIt->second.begin(), msgIt->second.end(),
+                [index](const ClientInfo& client) { return client.ClientIndex == index; });
+            if (clientIt != msgIt->second.end())
+            {
+                DBG_INFO("Client with index %lu already registered for message type 0x%04X.", index, type);
+                return;
+            }
+        }
         mMessages[type].push_back(*it);
     }
 }
@@ -91,6 +103,16 @@ void IPCServerBroker::Send(unsigned long index, IpcMessage* msg)
     if (server)
     {
         server->SendData(index, msg);
+    }
+}
+
+void IPCServerBroker::SendError(unsigned long index, unsigned short srcId, void* data, size_t data_size)
+{
+    if (server)
+    {
+        IpcMessage* msg = new IpcMessage(0, srcId, IPC_ERROR_DST_NOT_ONLINE, data, data_size);
+        server->SendData(index, msg);
+        delete msg;
     }
 }
 
@@ -149,7 +171,7 @@ void IPCServerBroker::OnServerDisconnect(unsigned long index)
     pThis->ClientDelete(index);
 }
 
-void IPCServerBroker::OnServerMessage(unsigned long index, VOID* data)
+void IPCServerBroker::OnServerMessage(unsigned long index, void* data, size_t data_size)
 {
     IpcMessage* msg = (IpcMessage*)data;
 
@@ -188,7 +210,24 @@ void IPCServerBroker::OnServerMessage(unsigned long index, VOID* data)
     {
         DBG_INFO("Sending message type 0x%04X from client index %lu to specific client with ID 0x%04X.", type, index, dstId);
         // Send to a specific client
-        pThis->Send(dstId, msg);
+        // Find client with the specified ID and send
+        int index_dst = -1;
+        for (const auto& client : pThis->mClients)
+        {
+            if (client.ClientId == dstId)
+            {
+                index_dst = client.ClientIndex;
+                break;
+            }
+        }
+        if (index_dst == -1)
+        {
+            DBG_INFO("No client with ID 0x%04X found.", dstId);
+            pThis->SendError(index, srcId, data, data_size);
+
+            return;
+        }
+        pThis->Send(index_dst, msg);
     }
 }
 
@@ -217,6 +256,13 @@ void IPCServerBroker::RunBroker(const char* serverName)
     }
 
     server->Start();
+}
+
+void IPCServerBroker::RunBrokerAsync(const char* serverName)
+{
+    std::thread([this, serverName]() {
+        RunBroker(serverName);
+        }).detach();
 }
 
 void IPCServerBroker::StopBroker()
