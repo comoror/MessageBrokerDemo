@@ -2,10 +2,12 @@
 //
 
 #include <iostream>
-#include "..\IPC\IPCClient.h"
-#include "..\BrokerSvc\Common.h"
+#include "..\IPC\IPC.h"
+#include "..\IPC\IPCMessage.h"
 
-void OnClientMessage(void* msg)
+#define IPC_BROKER_PIPE "\\\\.\\pipe\\MessageBroker_IPCBroker"
+
+void OnClientMessage(void* msg, size_t buf_size)
 {
     IpcMessage* pMsg = (IpcMessage*)msg;
 
@@ -13,27 +15,13 @@ void OnClientMessage(void* msg)
     printf("Message SrcId: 0x%04X\n", pMsg->header.SrcId);
     printf("Message DstId: 0x%04X\n", pMsg->header.DstId);
     printf("Message Data Size: %d\n", pMsg->header.Size);
-
-    DWORD dwSessionID = *(DWORD*)pMsg->Data;
-    if (pMsg->header.Type == IPCMessageType::SESSION_LOCK)
-    {
-        printf("Session %d locked\n", dwSessionID);
-    }
-    else if (pMsg->header.Type == IPCMessageType::SESSION_UNLOCK)
-    {
-        printf("Session %d unlocked\n", dwSessionID);
-    }
-    else
-    {
-        printf("Unknown message type: 0x%04X\n", pMsg->header.Type);
-    }
 }
 
 int main()
 {
-    IPCClient client(0xF111);
+    void* pIpcClient = ipc_client_start(IPC_BROKER_PIPE, 0xF002, OnClientMessage);
 
-    if (client.Connect("\\\\.\\pipe\\DemoBroker", OnClientMessage))
+    if (pIpcClient)
     {
         printf("Connect success\n");
     }
@@ -44,9 +32,19 @@ int main()
         return -1;
     }
 
-    client.RegisterMessage(IPCMessageType::SESSION_UNLOCK);
+    system("PAUSE");
+
+    int ret = ipc_client_send(pIpcClient, 0xF002, 0xF001, 1000, NULL, 0);
+    if (ret == 0)
+    {
+        printf("Send message success\n");
+    }
+    else
+    {
+        printf("Send message fail: %d\n", ret);
+    }
 
     system("PAUSE");
 
-    client.Disconnect();
+    ipc_client_stop(pIpcClient);
 }

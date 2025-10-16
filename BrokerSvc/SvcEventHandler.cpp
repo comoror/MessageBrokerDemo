@@ -3,7 +3,6 @@
 #include <string>
 #include "SvcEventHandler.h"
 #include "Log.h"
-#include "Worker_IPC.h"
 #include "Common.h"
 
 void OnPowerEvent(IN DWORD dwEventType,
@@ -297,9 +296,6 @@ void OnSessionChange(IN DWORD dwEventType,
         LOG_INFO("Session, %d, WTS_SESSION_REMOTE_CONTROL", pSessionNotify->dwSessionId);
         break;
     }
-
-    Worker_IPC::send(std::make_shared<IpcMessage>(0xF001, IPC_BROADCAST,
-        ipcMessageType, &pSessionNotify->dwSessionId, (unsigned short)sizeof(pSessionNotify->dwSessionId)));
 }
 
 void OnDeviceEvent(IN DWORD dwEventType, IN LPVOID lpEventData, IN LPVOID lpContext)

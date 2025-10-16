@@ -24,16 +24,13 @@
     <ClCompile Include="worker.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Worker_IPC.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="SvcEventHandler.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Log.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Worker_Broker.cpp">
+    <ClCompile Include="Worker_IPCBroker.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Util_Svc.cpp">
@@ -42,9 +39,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="worker.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="Worker_IPC.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="SvcEventHandler.h">
@@ -56,7 +50,7 @@
     <ClInclude Include="Common.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Worker_Broker.h">
+    <ClInclude Include="Worker_IPCBroker.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Util_Svc.h">
