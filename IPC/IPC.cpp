@@ -7,7 +7,7 @@
 #include "IPCMessage.h"
 #include "IPCClient.h"
 
-void* ipc_client_start(const char* pipe_name,
+IPC_CLIENT_HANDLE ipc_client_start(const char* pipe_name,
     unsigned short client_id,
     PIPC_CLIENT_ON_MESSAGE onMessage,
     PIPC_CLIENT_ON_CONNECT onConnect,
@@ -39,7 +39,7 @@ void* ipc_client_start(const char* pipe_name,
 	}
 }
 
-void ipc_client_stop(void* pClient)
+void ipc_client_stop(IPC_CLIENT_HANDLE pClient)
 {
     IPCClient* pIpcClient = (IPCClient*)pClient;
     if (pIpcClient)
@@ -49,18 +49,17 @@ void ipc_client_stop(void* pClient)
     }
 }
 
-int ipc_client_send(void* pClient, 
-    unsigned short srcID, 
-    unsigned short dstID, 
-    unsigned short msgType, 
-    void* data, 
+int ipc_client_send(IPC_CLIENT_HANDLE pClient,
+    unsigned short dstID,
+    unsigned short msgType,
+    void* data,
     unsigned short data_len)
 {
     IPCClient* pIpcClient = (IPCClient*)pClient;
 
     if (!pIpcClient)
     {
-        return -1;
+        return IPC_ERR_INVALID_PARAM;
     }
 
     // 验证数据大小
@@ -68,38 +67,38 @@ int ipc_client_send(void* pClient,
     if (data_len > MAX_DATA_SIZE)
     {
         DBG_ERROR("Data size %u exceeds maximum allowed size %zu", data_len, MAX_DATA_SIZE);
-        return -1;
+        return IPC_ERR_DATA_TOO_LARGE;
     }
 
     try
     {
-        // 在栈上创建对象，Send 方法会立即发送数据
-        IpcMessage message(srcID, dstID, msgType, data, data_len);
-        return pIpcClient->Send(&message);
+        // srcId=0, broker will fill in the real srcId from registration
+        IpcMessage message(0, dstID, msgType, data, data_len);
+        int ret = pIpcClient->Send(&message);
+        return (ret == 0) ? IPC_OK : IPC_ERR_SEND_FAILED;
     }
     catch (const std::exception& e)
     {
         DBG_ERROR("Failed to send message: %s", e.what());
-        return -1;
+        return IPC_ERR_SEND_FAILED;
     }
 }
 
-int ipc_client_broadcast(void* pClient, 
-    unsigned short srcID,
-    unsigned short msgType, 
-    void* data, 
+int ipc_client_broadcast(IPC_CLIENT_HANDLE pClient,
+    unsigned short msgType,
+    void* data,
     unsigned short data_len)
 {
-    return ipc_client_send(pClient, srcID, IPC_BROADCAST, msgType, data, data_len);
+    return ipc_client_send(pClient, IPC_BROADCAST, msgType, data, data_len);
 }
 
-int ipc_client_register_msg(void* pClient, unsigned short msgType)
+int ipc_client_register_msg(IPC_CLIENT_HANDLE pClient, unsigned short msgType)
 {
     IPCClient* pIpcClient = (IPCClient*)pClient;
 
     if (!pIpcClient)
     {
-        return -1;
+        return IPC_ERR_INVALID_PARAM;
     }
 
     // 重试机制：尝试注册消息类型
@@ -108,18 +107,18 @@ int ipc_client_register_msg(void* pClient, unsigned short msgType)
         int result = pIpcClient->RegisterMessage(msgType);
         if (result >= 0)  // 成功
         {
-            return result;
+            return IPC_OK;
         }
         Sleep(100);
     } while (--retry > 0);
     
-    return -2;  // 所有重试都失败
+    return IPC_ERR_RETRY_FAILED;
 }
 
 //////////////////////////////////////////////////////////////////
 #include "IPCServerBroker.h"
 
-void* ipc_broker_start(const char* pipe_name, PIPC_BROKER_ON_AUTH onAuth)
+IPC_BROKER_HANDLE ipc_broker_start(const char* pipe_name, PIPC_BROKER_ON_AUTH onAuth)
 {
     IPCServerBroker* pServerBroker = nullptr;
     
@@ -137,7 +136,7 @@ void* ipc_broker_start(const char* pipe_name, PIPC_BROKER_ON_AUTH onAuth)
     }
 }
 
-void* ipc_broker_start_async(const char* pipe_name, PIPC_BROKER_ON_AUTH onAuth)
+IPC_BROKER_HANDLE ipc_broker_start_async(const char* pipe_name, PIPC_BROKER_ON_AUTH onAuth)
 {
     IPCServerBroker* pServerBroker = nullptr;
     
@@ -155,7 +154,7 @@ void* ipc_broker_start_async(const char* pipe_name, PIPC_BROKER_ON_AUTH onAuth)
     }
 }
 
-void ipc_broker_stop(void* pBroker)
+void ipc_broker_stop(IPC_BROKER_HANDLE pBroker)
 {
     IPCServerBroker* pServerBroker = (IPCServerBroker*)pBroker;
     if (pServerBroker)

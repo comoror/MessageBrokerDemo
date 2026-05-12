@@ -34,7 +34,7 @@ int main()
 
     system("PAUSE");
 
-    int ret = ipc_client_send(pIpcClient, 0xF002, 0xF001, 1000, NULL, 0);
+    int ret = ipc_client_send(pIpcClient, 0xF001, 1000, NULL, 0);
     if (ret == 0)
     {
         printf("Send message success\n");

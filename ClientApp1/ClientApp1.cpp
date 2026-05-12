@@ -22,7 +22,7 @@ void OnClientMessage(void* msg, size_t buf_size)
 
     if (pMsg->header.SrcId == 0)
     {
-        if (pMsg->header.Type == IPC_ERROR::IPC_ERROR_DST_NOT_ONLINE)
+        if (pMsg->header.Type == IPC_MSG_DST_NOT_FOUND)
         {
             printf("0x%04X not on line\n", pMsg->header.DstId);
         }
@@ -50,7 +50,7 @@ int main()
 
     system("PAUSE");
 
-    int ret = ipc_client_send(pIpcClient, IPC_CLIENT_TEST, IPC_CLIENT_PERF, 1000, 
+    int ret = ipc_client_send(pIpcClient, IPC_CLIENT_PERF, 1000, 
         (void*)"123123", sizeof("123123"));
     if (ret == 0)
     {
@@ -65,7 +65,7 @@ int main()
 
     std::string strJson = "{\"pid\":234, \"pname\" : \"example.exe\" }";
 
-    ret = ipc_client_send(pIpcClient, IPC_CLIENT_TEST, IPC_CLIENT_HANG, 1000, 
+    ret = ipc_client_send(pIpcClient, IPC_CLIENT_HANG, 1000, 
         (void*)strJson.c_str(), strJson.length());
     if (ret == 0)
     {

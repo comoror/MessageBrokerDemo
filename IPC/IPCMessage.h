@@ -2,7 +2,7 @@
 
 #include <windows.h>
 #include <memory>
-#include <iostream>
+#include <stdexcept>
 
 //Destination IDs
 const unsigned short IPC_CONTROL   = 0;        // Control Message  
@@ -17,13 +17,6 @@ constexpr unsigned short IPC_MSG_TOO_LARGE     = 4;   // Message size too large
 constexpr unsigned short IPC_MSG_HEARTBEAT     = 5;   // Heartbeat
 constexpr unsigned short IPC_MSG_KICK          = 6;   // Client replaced by another with same id
 constexpr unsigned short IPC_MSG_USER_MIN      = 10;  // User-defined message types start here
-
-enum IPC_ERROR : unsigned short
-{
-    IPC_ERROR_INVALID = 0,          // Invalid message
-    IPC_ERROR_DST_NOT_ONLINE = 1,   // Destination client not connected
-    IPC_ERROR_MAX = 100             // Maximum error code
-};
 
 struct IPCHeader
 {
@@ -75,15 +68,12 @@ struct IpcMessage
 
     bool IsValid()
     {
-        // Check if the message is valid
-        if (header.Signature != 'IPCM') // Check signature
+        if (header.Signature != 'IPCM')
         {
-            std::cerr << "Invalid IPC message signature: " << header.Signature << std::endl;
             return false;
         }
         if (header.Size < sizeof(IPCHeader) || header.Size > sizeof(IpcMessage))
         {
-            std::cerr << "Invalid IPC message size: " << header.Size << std::endl;
             return false;
         }
         return true;
