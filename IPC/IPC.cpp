@@ -120,6 +120,7 @@ IPC_RESULT ipc_client_register_msg(IPC_CLIENT_HANDLE pClient, unsigned short msg
 
 IPC_BROKER_HANDLE ipc_broker_start(const char* pipe_name,
     PIPC_BROKER_ON_CLIENT_CONNECT onConnect,
+    PIPC_BROKER_ON_CLIENT_AUTH onAuth,
     PIPC_BROKER_ON_CLIENT_DISCONNECT onDisconnect)
 {
     IPCServerBroker* pServerBroker = nullptr;
@@ -128,7 +129,7 @@ IPC_BROKER_HANDLE ipc_broker_start(const char* pipe_name,
     {
     	pServerBroker = new IPCServerBroker();
         pServerBroker->SetOnClientDisconnect(onDisconnect);
-        pServerBroker->RunBrokerAsync(pipe_name, onConnect);
+        pServerBroker->RunBrokerAsync(pipe_name, onConnect, onAuth);
         return pServerBroker;
     }
     catch (const std::exception& e)

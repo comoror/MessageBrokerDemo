@@ -24,14 +24,24 @@
 ```cpp
 #define MY_PIPE "\\\\.\\pipe\\MyApp_Broker"
 
-// 认证回调：返回 true 允许连接，返回 false 拒绝连接
-bool OnAuth(void* hPipe)
+// 连接回调：管道连接建立时触发（此时尚无 clientId）
+// 返回 true 允许连接，false 拒绝连接
+bool OnConnect(void* hPipe)
 {
     // hPipe 是客户端的命名管道 HANDLE
     // 可通过 PID 验证客户端进程的文件签名：
     // ULONG pid = 0;
     // GetNamedPipeClientProcessId((HANDLE)hPipe, &pid);
     // return VerifyProcessSignature(pid);
+    return true;
+}
+
+// 认证回调：客户端注册时触发（此时已知 clientId）
+// 返回 true 允许注册，false 拒绝并断开连接
+bool OnAuth(void* hPipe, unsigned short clientId)
+{
+    // 可根据 clientId 做白名单校验
+    // 也可结合 hPipe 做进程级验证
     return true;
 }
 
@@ -42,13 +52,23 @@ void OnClientDisconnect(unsigned short clientId)
 }
 
 // 启动 Broker（非阻塞，在后台线程运行）
-IPC_BROKER_HANDLE hBroker = ipc_broker_start(MY_PIPE, OnAuth, OnClientDisconnect);
+IPC_BROKER_HANDLE hBroker = ipc_broker_start(MY_PIPE, OnConnect, OnAuth, OnClientDisconnect);
 if (!hBroker)
 {
     printf("Broker 启动失败\n");
     return -1;
 }
 ```
+
+**回调触发时机**：
+
+| 回调 | 触发时机 | 可用信息 | 用途 |
+|------|----------|----------|------|
+| `OnConnect` | 管道连接建立时 | `hPipe`（可获取 PID） | 进程级校验（签名验证等） |
+| `OnAuth` | 客户端发送注册消息时 | `hPipe` + `clientId` | 基于 clientId 的白名单/权限校验 |
+| `OnDisconnect` | 客户端断开时 | `clientId` | 清理资源、日志记录 |
+
+三个回调均为可选（传 `nullptr` 即跳过校验/通知）。
 
 ### 停止 Broker
 
@@ -230,7 +250,9 @@ enum IPC_RESULT : int
 
 #define PIPE_NAME "\\\\.\\pipe\\MyApp_Broker"
 
-bool OnAuth(void* hPipe) { return true; }
+bool OnConnect(void* hPipe) { return true; }
+
+bool OnAuth(void* hPipe, unsigned short clientId) { return true; }
 
 void OnDisconnect(unsigned short clientId)
 {
@@ -239,7 +261,7 @@ void OnDisconnect(unsigned short clientId)
 
 int main()
 {
-    IPC_BROKER_HANDLE hBroker = ipc_broker_start(PIPE_NAME, OnAuth, OnDisconnect);
+    IPC_BROKER_HANDLE hBroker = ipc_broker_start(PIPE_NAME, OnConnect, OnAuth, OnDisconnect);
     if (!hBroker) return -1;
 
     printf("Broker 运行中，按 Enter 停止。\n");
@@ -328,4 +350,5 @@ int main()
 - `client_id` 在所有已连接客户端中必须唯一。有效范围：`0x0001` ~ `0xFFFE`。
 - 用户自定义 `msg_type` 必须 >= `IPC_MSG_USER_MIN`（10）。
 - `OnMessage` 回调在工作线程中被调用 — 若访问共享状态需自行保证线程安全。
-- `OnAuth` 回调接收原始管道 `HANDLE`，可通过 `GetNamedPipeClientProcessId` 获取客户端 PID 进行签名验证。
+- `OnConnect` 回调在管道连接建立时触发，接收原始管道 `HANDLE`，可通过 `GetNamedPipeClientProcessId` 获取客户端 PID 进行签名验证。
+- `OnAuth` 回调在客户端注册时触发，接收管道 `HANDLE` 和 `clientId`，可做基于 ID 的白名单校验。

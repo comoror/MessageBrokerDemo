@@ -62,6 +62,18 @@ void IPCServerBroker::ClientUpdate(unsigned long index, unsigned short srcId)
 {
     DBG_INFO("Client [0x%04X] with pipe index %lu updated.", srcId, index);
 
+    // Auth check at registration time
+    if (m_pOnAuth)
+    {
+        void* hPipe = server->GetClientHandle(index);
+        if (!m_pOnAuth(hPipe, srcId))
+        {
+            DBG_WARN("WARN: Client [0x%04X] auth failed at pipe index %lu, disconnecting.", srcId, index);
+            ClientDelete(index);
+            DisconnectClient(index);
+            return;
+        }
+    }
     unsigned long oldIndex = (unsigned long)-1;
 
     // Under lock: detect duplicate, update
@@ -387,9 +399,10 @@ void IPCServerBroker::OnServerMessage(void* pContext, unsigned long index, void*
     }
 }
 
-void IPCServerBroker::RunBroker(const char* serverName, PIPC_BROKER_ON_CLIENT_CONNECT onConnect)
+void IPCServerBroker::RunBroker(const char* serverName, PIPC_BROKER_ON_CLIENT_CONNECT onConnect, PIPC_BROKER_ON_CLIENT_AUTH onAuth)
 {
     m_pOnConnect = onConnect;
+    m_pOnAuth = onAuth;
 
     if (server)
     {
@@ -416,11 +429,11 @@ void IPCServerBroker::RunBroker(const char* serverName, PIPC_BROKER_ON_CLIENT_CO
     server->Start();
 }
 
-void IPCServerBroker::RunBrokerAsync(const char* serverName, PIPC_BROKER_ON_CLIENT_CONNECT onConnect)
+void IPCServerBroker::RunBrokerAsync(const char* serverName, PIPC_BROKER_ON_CLIENT_CONNECT onConnect, PIPC_BROKER_ON_CLIENT_AUTH onAuth)
 {
     std::string name(serverName);
-    m_brokerThread = std::thread([this, name, onConnect]() {
-        RunBroker(name.c_str(), onConnect);
+    m_brokerThread = std::thread([this, name, onConnect, onAuth]() {
+        RunBroker(name.c_str(), onConnect, onAuth);
     });
 }
 

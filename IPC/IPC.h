@@ -9,6 +9,8 @@ typedef void (*PIPC_CLIENT_ON_MESSAGE) (void* inBuf, size_t bufSize);
 
 // Broker connect callback: receives pipe HANDLE, return true to allow, false to reject
 typedef bool (*PIPC_BROKER_ON_CLIENT_CONNECT) (void* hPipe);
+// Broker auth callback: receives pipe HANDLE + clientId at registration, return true to allow
+typedef bool (*PIPC_BROKER_ON_CLIENT_AUTH) (void* hPipe, unsigned short clientId);
 // Broker disconnect callback: receives the client_id that disconnected
 typedef void (*PIPC_BROKER_ON_CLIENT_DISCONNECT) (unsigned short clientId);
 
@@ -54,6 +56,7 @@ extern "C"
     //return: IPC_BROKER_HANDLE, nullptr if failed
     IPC_BROKER_HANDLE ipc_broker_start(const char* pipe_name,
         PIPC_BROKER_ON_CLIENT_CONNECT onConnect,
+        PIPC_BROKER_ON_CLIENT_AUTH onAuth,
         PIPC_BROKER_ON_CLIENT_DISCONNECT onDisconnect);
 
     void ipc_broker_stop(IPC_BROKER_HANDLE pBroker);

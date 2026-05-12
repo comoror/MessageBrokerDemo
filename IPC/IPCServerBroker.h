@@ -22,6 +22,7 @@ public:
 private:
     IPCServer* server = nullptr;
     PIPC_BROKER_ON_CLIENT_CONNECT m_pOnConnect = nullptr;
+    PIPC_BROKER_ON_CLIENT_AUTH m_pOnAuth = nullptr;
     PIPC_BROKER_ON_CLIENT_DISCONNECT m_pOnClientDisconnect = nullptr;
     std::thread m_brokerThread;
 
@@ -47,8 +48,8 @@ private:
     static void OnServerMessage(void* pContext, unsigned long index, void* msg, size_t data_size);
 
 public:
-    void RunBroker(const char* serverName, PIPC_BROKER_ON_CLIENT_CONNECT onConnect = nullptr);
-    void RunBrokerAsync(const char* serverName, PIPC_BROKER_ON_CLIENT_CONNECT onConnect = nullptr);
+    void RunBroker(const char* serverName, PIPC_BROKER_ON_CLIENT_CONNECT onConnect = nullptr, PIPC_BROKER_ON_CLIENT_AUTH onAuth = nullptr);
+    void RunBrokerAsync(const char* serverName, PIPC_BROKER_ON_CLIENT_CONNECT onConnect = nullptr, PIPC_BROKER_ON_CLIENT_AUTH onAuth = nullptr);
     void SetOnClientDisconnect(PIPC_BROKER_ON_CLIENT_DISCONNECT onDisconnect);
     void StopBroker();
     void Broadcast(unsigned short type, IpcMessage* msg);
