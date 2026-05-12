@@ -35,7 +35,7 @@ private:
 
     void MessageRegister(unsigned long index, unsigned short type);
     void Send(unsigned long index, IpcMessage* msg);
-    void SendError(unsigned long index, unsigned short srcId, void* data, size_t data_size);
+    void SendError(unsigned long index, unsigned short srcId);
 
     void SendAck(unsigned long index, unsigned short srcId, unsigned short dstId);
     void SendInvalid(unsigned long index);

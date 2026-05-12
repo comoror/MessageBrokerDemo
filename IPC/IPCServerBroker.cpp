@@ -150,7 +150,7 @@ void IPCServerBroker::Send(unsigned long index, IpcMessage* msg)
     }
 }
 
-void IPCServerBroker::SendError(unsigned long index, unsigned short srcId, void* data, size_t data_size)
+void IPCServerBroker::SendError(unsigned long index, unsigned short srcId)
 {
     if (server)
     {
@@ -388,7 +388,7 @@ void IPCServerBroker::OnServerMessage(void* pContext, unsigned long index, void*
         if (index_dst == -1)
         {
             DBG_INFO("No client with ID 0x%04X found.", dstId);
-            pThis->SendError(index, srcId, data, data_size);
+            pThis->SendError(index, srcId);
             return;
         }
 

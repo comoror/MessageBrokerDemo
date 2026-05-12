@@ -23,7 +23,7 @@ bool IPCClient::Connect(const char* pipeName, PPIPE_CLIENT_ON_MESSAGE onMessage,
 #endif
     {
         // Register the client with the server
-        RegisterClient(mClientId);
+        RegisterClient();
         return true;
     }
     else
@@ -64,7 +64,7 @@ int IPCClient::RegisterMessage(unsigned short type)
     return -1;
 }
 
-void IPCClient::RegisterClient(unsigned short clientId)
+void IPCClient::RegisterClient()
 {
     if (pClient)
     {

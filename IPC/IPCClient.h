@@ -23,7 +23,7 @@ private:
     unsigned short  mClientId = 0;     // Identifier for the client
     CNamedPipeClient* pClient = nullptr;
 
-    void RegisterClient(unsigned short clientId);
+    void RegisterClient();
 };
 #else
 // For non-Windows platforms, you can define a dummy IPCClient or implement your own IPC mechanism

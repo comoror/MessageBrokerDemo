@@ -17,12 +17,12 @@ bool IPCServer::Listen(const char* pipeName,
 #ifdef UNICODE
     wchar_t pipeNameW[MAX_PATH];
     mbstowcs_s(nullptr, pipeNameW, MAX_PATH, pipeName, _TRUNCATE);
-    pServer = new CNamedPipeServer(pipeNameW, onMessage, onConnect, onDisconnect, pContext);
+    pServer = new(std::nothrow) CNamedPipeServer(pipeNameW, onMessage, onConnect, onDisconnect, pContext);
 #else
-    pServer = new CNamedPipeServer((char*)pipeName, onMessage, onConnect, onDisconnect, pContext);
+    pServer = new(std::nothrow) CNamedPipeServer((char*)pipeName, onMessage, onConnect, onDisconnect, pContext);
 #endif
 
-    return (pServer != nullptr) ? true : false;
+    return (pServer != nullptr);
 }
 
 void IPCServer::SendData(unsigned long index, IpcMessage* msg)

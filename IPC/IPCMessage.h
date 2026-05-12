@@ -66,7 +66,7 @@ struct IpcMessage
         }
     }
 
-    bool IsValid()
+    bool IsValid() const
     {
         if (header.Signature != 'IPCM')
         {
