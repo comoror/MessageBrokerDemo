@@ -21,7 +21,7 @@ constexpr unsigned short IPC_MSG_USER_MIN      = 10;  // User-defined message ty
 struct IPCHeader
 {
     unsigned long   Signature;   // Signature for IPC messages
-    unsigned long   Timestamp;   // Timestamp of the message
+    unsigned long   MsgId;       // Message ID (timestamp)
     unsigned short  SrcId;      // Source ID
     unsigned short  DstId;      // Destination ID
     unsigned short  Type;       // Message type
@@ -29,7 +29,7 @@ struct IPCHeader
 
     IPCHeader()
         : Signature('IPCM'),
-        Timestamp(0),
+        MsgId(0),
         SrcId(0),
         DstId(0),
         Type(0),
@@ -49,7 +49,7 @@ struct IpcMessage
     {
         memset(Data, 0, sizeof(Data)); // Clear the data buffer
 
-        header.Timestamp = GetTickCount(); // Set the timestamp as msg_id
+        header.MsgId = GetTickCount(); // msg_id = timestamp
         header.SrcId = srcId; // Default source ID
         header.DstId = dstId; // Default destination ID
         header.Type = msgType; // Default message type

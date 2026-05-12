@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CNamedPipeIPC.h"
+#include <sddl.h>
 
 typedef VOID (*PPIPE_SERVER_ON_CONNECT) (void* pContext, DWORD pipeIndex);
 typedef VOID (*PPIPE_SERVER_ON_DISCONNECT) (void* pContext, DWORD pipeIndex);
@@ -75,23 +76,16 @@ private:
 
 		DWORD CreatePipeInstance(LPCTSTR lpszPipeName)
 		{
-            //initialize the scurity descriptor
-            SECURITY_DESCRIPTOR sd = {};
-
-            // Initialize the security descriptor
-			if (!InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION))
-			{
-				return GetLastError();
+            // Build DACL: allow Authenticated Users only (excludes Guest/Anonymous)
+            PSECURITY_DESCRIPTOR pSD = NULL;
+            if (!ConvertStringSecurityDescriptorToSecurityDescriptor(
+                TEXT("D:(A;;GA;;;AU)"),  // Grant Generic All to Authenticated Users
+                SDDL_REVISION_1, &pSD, NULL))
+            {
+                return GetLastError();
             }
 
-            // Set the security descriptor to allow all users to access the pipe
-            if (!SetSecurityDescriptorDacl(&sd, TRUE, NULL, FALSE))
-			{
-				return GetLastError();
-            }
-
-            //set security attributes to allow access from all users
-            SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), &sd, TRUE };
+            SECURITY_ATTRIBUTES sa = { sizeof(SECURITY_ATTRIBUTES), pSD, FALSE };
 
 			HANDLE hPipe = CreateNamedPipe(
 				lpszPipeName,
@@ -102,6 +96,9 @@ private:
 				nMaxBufferSize,
 				nPipeTimeout,
 				&sa);
+
+            LocalFree(pSD);
+
 			if (hPipe == INVALID_HANDLE_VALUE)
 			{
 				return GetLastError();

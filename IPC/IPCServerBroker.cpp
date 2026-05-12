@@ -39,7 +39,7 @@ void IPCServerBroker::ClientDelete(unsigned long index)
         [index](const ClientInfo& client) { return client.ClientIndex == index; });
     if (it != mClients.end())
     {
-        mClients.erase(it);
+        mClients.erase(it, mClients.end());
     }
 
     //remove from messages
@@ -280,7 +280,27 @@ void IPCServerBroker::OnServerDisconnect(void* pContext, unsigned long index)
         return;
     }
     DBG_INFO("Client disconnected with index: %lu", index);
+
+    // Find client_id before deleting, for the disconnect callback
+    unsigned short clientId = 0;
+    if (pThis->m_pOnClientDisconnect)
+    {
+        std::lock_guard<std::mutex> lock(pThis->mMutex);
+        auto it = std::find_if(pThis->mClients.begin(), pThis->mClients.end(),
+            [index](const ClientInfo& client) { return client.ClientIndex == index; });
+        if (it != pThis->mClients.end())
+        {
+            clientId = it->ClientId;
+        }
+    }
+
     pThis->ClientDelete(index);
+
+    // Notify the host application
+    if (pThis->m_pOnClientDisconnect && clientId != 0)
+    {
+        pThis->m_pOnClientDisconnect(clientId);
+    }
 }
 
 void IPCServerBroker::OnServerMessage(void* pContext, unsigned long index, void* data, size_t data_size)
@@ -292,10 +312,19 @@ void IPCServerBroker::OnServerMessage(void* pContext, unsigned long index, void*
         return;
     }
 
+    // Check message size too small (must at least contain a header)
+    if (data_size < sizeof(IPCHeader))
+    {
+        DBG_WARN("WARN: Message too small from client index %lu, size: %zu.", index, data_size);
+        pThis->SendInvalid(index);
+        return;
+    }
+
     // Check message size too large
     if (data_size > sizeof(IpcMessage))
     {
         DBG_WARN("WARN: Message too large from client index %lu, size: %zu.", index, data_size);
+        // Header is guaranteed accessible (passed minimum size check above)
         IpcMessage* oversizeMsg = (IpcMessage*)data;
         pThis->SendTooLarge(index, oversizeMsg->header.SrcId);
         return;
@@ -322,9 +351,14 @@ void IPCServerBroker::OnServerMessage(void* pContext, unsigned long index, void*
             // Update client information
             pThis->ClientUpdate(index, srcId);
         }
-        else  // Register client to msg type
+        else if (type >= IPC_MSG_USER_MIN)  // Register client to user-defined msg type
         {
             pThis->MessageRegister(index, type);
+        }
+        else
+        {
+            // Reserved type 1~9, clients should not send these as control messages
+            DBG_WARN("WARN: Client index %lu sent reserved control type 0x%04X, ignored.", index, type);
         }
     }
     else if (dstId == IPC_BROADCAST)
@@ -396,9 +430,9 @@ void IPCServerBroker::RunBroker(const char* serverName, PIPC_BROKER_ON_AUTH onAu
 void IPCServerBroker::RunBrokerAsync(const char* serverName, PIPC_BROKER_ON_AUTH onAuth)
 {
     std::string name(serverName);
-    std::thread([this, name, onAuth]() {
+    m_brokerThread = std::thread([this, name, onAuth]() {
         RunBroker(name.c_str(), onAuth);
-        }).detach();
+    });
 }
 
 void IPCServerBroker::StopBroker()
@@ -406,7 +440,19 @@ void IPCServerBroker::StopBroker()
     if (server)
     {
         server->Stop();
+
+        // Wait for broker thread to exit before deleting server
+        if (m_brokerThread.joinable())
+        {
+            m_brokerThread.join();
+        }
+
         delete server;
         server = nullptr;
     }
+}
+
+void IPCServerBroker::SetOnClientDisconnect(PIPC_BROKER_ON_CLIENT_DISCONNECT onDisconnect)
+{
+    m_pOnClientDisconnect = onDisconnect;
 }

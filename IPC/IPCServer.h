@@ -9,6 +9,8 @@
 class IPCServer
 {
 public:
+    ~IPCServer() { Stop(); }
+
     bool Listen(const char* pipeName,
         PPIPE_SERVER_ON_MESSAGE onMessage,
         PPIPE_SERVER_ON_CONNECT onConnect,

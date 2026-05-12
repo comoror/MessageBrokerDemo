@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <thread>
 
-#ifndef _DEBUG
+#ifdef _DEBUG
 #define DBG_LOG(fmt, ...) DbgPrintf("%hs(%d)!"##fmt, __FUNCTION__, __LINE__, __VA_ARGS__)
 #else
 #define DBG_LOG(fmt, ...)

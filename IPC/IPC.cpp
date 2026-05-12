@@ -49,7 +49,7 @@ void ipc_client_stop(IPC_CLIENT_HANDLE pClient)
     }
 }
 
-int ipc_client_send(IPC_CLIENT_HANDLE pClient,
+IPC_RESULT ipc_client_send(IPC_CLIENT_HANDLE pClient,
     unsigned short dstID,
     unsigned short msgType,
     void* data,
@@ -84,7 +84,7 @@ int ipc_client_send(IPC_CLIENT_HANDLE pClient,
     }
 }
 
-int ipc_client_broadcast(IPC_CLIENT_HANDLE pClient,
+IPC_RESULT ipc_client_broadcast(IPC_CLIENT_HANDLE pClient,
     unsigned short msgType,
     void* data,
     unsigned short data_len)
@@ -92,7 +92,7 @@ int ipc_client_broadcast(IPC_CLIENT_HANDLE pClient,
     return ipc_client_send(pClient, IPC_BROADCAST, msgType, data, data_len);
 }
 
-int ipc_client_register_msg(IPC_CLIENT_HANDLE pClient, unsigned short msgType)
+IPC_RESULT ipc_client_register_msg(IPC_CLIENT_HANDLE pClient, unsigned short msgType)
 {
     IPCClient* pIpcClient = (IPCClient*)pClient;
 
@@ -118,37 +118,22 @@ int ipc_client_register_msg(IPC_CLIENT_HANDLE pClient, unsigned short msgType)
 //////////////////////////////////////////////////////////////////
 #include "IPCServerBroker.h"
 
-IPC_BROKER_HANDLE ipc_broker_start(const char* pipe_name, PIPC_BROKER_ON_AUTH onAuth)
+IPC_BROKER_HANDLE ipc_broker_start(const char* pipe_name,
+    PIPC_BROKER_ON_AUTH onAuth,
+    PIPC_BROKER_ON_CLIENT_DISCONNECT onDisconnect)
 {
     IPCServerBroker* pServerBroker = nullptr;
     
     try
     {
     	pServerBroker = new IPCServerBroker();
-        pServerBroker->RunBroker(pipe_name, onAuth);
-    	return pServerBroker;
-	}
-    catch (const std::exception& e)
-    {
-        DBG_ERROR("Failed to start broker: %s", e.what());
-        delete pServerBroker;
-        return nullptr;
-    }
-}
-
-IPC_BROKER_HANDLE ipc_broker_start_async(const char* pipe_name, PIPC_BROKER_ON_AUTH onAuth)
-{
-    IPCServerBroker* pServerBroker = nullptr;
-    
-    try
-    {
-    	pServerBroker = new IPCServerBroker();
+        pServerBroker->SetOnClientDisconnect(onDisconnect);
         pServerBroker->RunBrokerAsync(pipe_name, onAuth);
         return pServerBroker;
     }
     catch (const std::exception& e)
     {
-        DBG_ERROR("Failed to start broker async: %s", e.what());
+        DBG_ERROR("Failed to start broker: %s", e.what());
         delete pServerBroker;
         return nullptr;
     }

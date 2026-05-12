@@ -8,7 +8,7 @@
 
 int main()
 {
-    void* pBroker = ipc_broker_start_async(IPC_BROKER_PIPE);
+    void* pBroker = ipc_broker_start(IPC_BROKER_PIPE, nullptr, nullptr);
     if(pBroker == nullptr)
     {
         std::cout << "Failed to start IPC server broker." << std::endl;

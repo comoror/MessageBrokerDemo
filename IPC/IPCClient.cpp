@@ -58,10 +58,8 @@ int IPCClient::RegisterMessage(unsigned short type)
 {
     if (pClient)
     {
-        IpcMessage* pMsg = new IpcMessage(mClientId, 0, type, nullptr, 0);
-        DWORD dwRet = pClient->SendData(pMsg, pMsg->header.Size);
-        delete pMsg; // Clean up the message after sending
-        return dwRet;
+        IpcMessage msg(mClientId, 0, type, nullptr, 0);
+        return pClient->SendData(&msg, msg.header.Size);
     }
     return -1;
 }
@@ -70,8 +68,7 @@ void IPCClient::RegisterClient(unsigned short clientId)
 {
     if (pClient)
     {
-        IpcMessage* pMsg = new IpcMessage(mClientId, 0, 0, nullptr, 0);
-        pClient->SendData(pMsg, pMsg->header.Size);
-        delete pMsg; // Clean up the message after sending
+        IpcMessage msg(mClientId, 0, 0, nullptr, 0);
+        pClient->SendData(&msg, msg.header.Size);
     }
 }

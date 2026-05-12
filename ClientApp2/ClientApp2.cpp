@@ -19,7 +19,7 @@ void OnClientMessage(void* msg, size_t buf_size)
 
 int main()
 {
-    void* pIpcClient = ipc_client_start(IPC_BROKER_PIPE, 0xF002, OnClientMessage);
+    void* pIpcClient = ipc_client_start(IPC_BROKER_PIPE, 0xF002, OnClientMessage, nullptr, nullptr);
 
     if (pIpcClient)
     {

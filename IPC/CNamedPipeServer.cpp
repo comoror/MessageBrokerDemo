@@ -33,6 +33,13 @@ CNamedPipeServer::~CNamedPipeServer()
 			m_hEvents[i] = NULL;
 		}
 	}
+
+    // close exit event handle
+    if (m_hExitEvent != NULL)
+	{
+		CloseHandle(m_hExitEvent);
+		m_hExitEvent = NULL;
+    }
 }
 
 DWORD CNamedPipeServer::Run()
@@ -92,6 +99,10 @@ DWORD CNamedPipeServer::CreatePipeAndEvents()
 		}
 
 		dwErr = ConnectToNewClient(m_instPipes[i].mPipeInstance.get(), &m_instPipes[i].mOverlap, m_instPipes[i].mPendingIO);
+		if (dwErr != ERROR_SUCCESS)
+		{
+			return dwErr;
+		}
 	}
 	return 0;
 }
@@ -270,7 +281,7 @@ DWORD CNamedPipeServer::ReadPipe(DWORD pipeIndex)
 DWORD CNamedPipeServer::WritePipe(DWORD pipeIndex, LPVOID msg, size_t msg_size)
 {
 	//lock
-	std::lock_guard<std::mutex> lock(m_mutexWrite);
+	std::unique_lock<std::mutex> lock(m_mutexWrite);
 
 	if (msg_size == 0)
 	{
@@ -315,7 +326,8 @@ DWORD CNamedPipeServer::WritePipe(DWORD pipeIndex, LPVOID msg, size_t msg_size)
 			lastError = GetLastError();
 			DBG_ERROR("WriteFile to pipe failed. GLE=%d: pipe %d\n", lastError, pipeIndex);
 
-			// An error occurred; disconnect from the client.
+			// Release lock before disconnect to avoid deadlock in callbacks
+			lock.unlock();
 			DisconnectAndReconnect(pipeIndex);
 			return lastError;
 		}
@@ -323,12 +335,12 @@ DWORD CNamedPipeServer::WritePipe(DWORD pipeIndex, LPVOID msg, size_t msg_size)
 	else
 	{
 		DBG_ERROR("WriteFile to pipe failed. GLE=%d: pipe %d\n", lastError, pipeIndex);
-		// An error occurred; disconnect from the client.
+
+		// Release lock before disconnect to avoid deadlock in callbacks
+		lock.unlock();
 		DisconnectAndReconnect(pipeIndex);
 		return lastError;
 	}
-
-	return 0;
 }
 
 DWORD CNamedPipeServer::SendData(DWORD pipeIndex, LPVOID msg, size_t msg_size)

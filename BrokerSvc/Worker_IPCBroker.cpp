@@ -25,7 +25,7 @@ int Worker_IPCBroker::start()
         LOG_WARN("IPC Broker already started.");
         return -1;
     }
-    g_ipc_broker = ipc_broker_start_async(IPC_BROKER_PIPE, OnBrokerAuth);
+    g_ipc_broker = ipc_broker_start(IPC_BROKER_PIPE, OnBrokerAuth, nullptr);
 
     return g_ipc_broker == nullptr ? 1 : 0;
 }
