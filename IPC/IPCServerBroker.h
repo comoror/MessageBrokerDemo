@@ -37,7 +37,6 @@ private:
     void Send(unsigned long index, IpcMessage* msg);
     void SendError(unsigned long index, unsigned short srcId);
 
-    void SendAck(unsigned long index, unsigned short srcId, unsigned short dstId);
     void SendInvalid(unsigned long index);
     void SendTooLarge(unsigned long index, unsigned short srcId);
     void SendKick(unsigned long index, unsigned short clientId);

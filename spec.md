@@ -25,7 +25,7 @@ msg_type
     //0~9, reserved for internal use
     0,  //client register
     1,  //dst not found
-    2,  //ack
+    2,  //reserved
     3,  //invalid message, header verify failed
     4,  //msg size too large
     5,  //heartbeat

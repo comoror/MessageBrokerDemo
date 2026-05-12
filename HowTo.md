@@ -192,7 +192,7 @@ ipc_client_stop(hClient);  // 断开连接并释放资源
 |-----|-------------------------|------------------|------------------------------|
 | 0   | `IPC_MSG_REGISTER`      | Client -> Broker | 客户端注册（自动发送）        |
 | 1   | `IPC_MSG_DST_NOT_FOUND` | Broker -> Client | 单播目标未找到               |
-| 2   | `IPC_MSG_ACK`           | Broker -> Client | 确认应答                     |
+| 2   | (reserved)              | -                | 保留                         |
 | 3   | `IPC_MSG_INVALID`       | Broker -> Client | 消息头校验失败               |
 | 4   | `IPC_MSG_TOO_LARGE`     | Broker -> Client | 消息超过最大允许大小          |
 | 5   | `IPC_MSG_HEARTBEAT`     | 双向             | 心跳                         |

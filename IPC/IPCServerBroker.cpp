@@ -159,15 +159,6 @@ void IPCServerBroker::SendError(unsigned long index, unsigned short srcId)
     }
 }
 
-void IPCServerBroker::SendAck(unsigned long index, unsigned short srcId, unsigned short dstId)
-{
-    if (server)
-    {
-        IpcMessage msg(0, srcId, IPC_MSG_ACK, &dstId, sizeof(dstId));
-        server->SendData(index, &msg);
-    }
-}
-
 void IPCServerBroker::SendInvalid(unsigned long index)
 {
     if (server)
@@ -393,8 +384,6 @@ void IPCServerBroker::OnServerMessage(void* pContext, unsigned long index, void*
         }
 
         pThis->Send(index_dst, msg);
-        // Send ACK to the sender
-        pThis->SendAck(index, srcId, dstId);
     }
 }
 

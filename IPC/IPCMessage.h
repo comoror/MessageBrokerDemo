@@ -11,7 +11,6 @@ const unsigned short IPC_BROADCAST = 0xFFFF;   // Broadcast to all clients
 // IPC internal message types (spec-defined, 0~9 reserved)
 constexpr unsigned short IPC_MSG_REGISTER      = 0;   // Client register
 constexpr unsigned short IPC_MSG_DST_NOT_FOUND = 1;   // Destination not found
-constexpr unsigned short IPC_MSG_ACK           = 2;   // Acknowledgment
 constexpr unsigned short IPC_MSG_INVALID       = 3;   // Invalid message (header verify failed)
 constexpr unsigned short IPC_MSG_TOO_LARGE     = 4;   // Message size too large
 constexpr unsigned short IPC_MSG_HEARTBEAT     = 5;   // Heartbeat
