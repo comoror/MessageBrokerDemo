@@ -15,23 +15,28 @@ void* ipc_client_start(const char* pipe_name,
 {
     IPCClient* pIpcClient = nullptr;
     
-    pIpcClient = new IPCClient(client_id);
-
-    if (pIpcClient)
+    try
     {
+    	pIpcClient = new IPCClient(client_id);
+
         if (pIpcClient->Connect(pipe_name, onMessage, onConnect, onDisconnect))
         {
             DBG_INFO("Connect success");
+            return pIpcClient;
         }
         else
         {
             DBG_INFO("Connect failed");
             delete pIpcClient;
-            pIpcClient = nullptr;
+            return nullptr;
         }
     }
-
-    return pIpcClient;
+    catch (const std::exception& e)
+    {
+        DBG_ERROR("Failed to start client: %s", e.what());
+        delete pIpcClient;
+        return nullptr;
+	}
 }
 
 void ipc_client_stop(void* pClient)
@@ -41,7 +46,6 @@ void ipc_client_stop(void* pClient)
     {
         pIpcClient->Disconnect();
         delete pIpcClient;
-        pIpcClient = nullptr;
     }
 }
 
@@ -54,11 +58,30 @@ int ipc_client_send(void* pClient,
 {
     IPCClient* pIpcClient = (IPCClient*)pClient;
 
-    if (pIpcClient)
+    if (!pIpcClient)
     {
-        return pIpcClient->Send(std::make_shared<IpcMessage>(srcID, dstID, msgType, data, data_len).get());
+        return -1;
     }
-    return -1;
+
+    // 验证数据大小
+    constexpr size_t MAX_DATA_SIZE = sizeof(IpcMessage::Data);
+    if (data_len > MAX_DATA_SIZE)
+    {
+        DBG_ERROR("Data size %u exceeds maximum allowed size %zu", data_len, MAX_DATA_SIZE);
+        return -1;
+    }
+
+    try
+    {
+        // 在栈上创建对象，Send 方法会立即发送数据
+        IpcMessage message(srcID, dstID, msgType, data, data_len);
+        return pIpcClient->Send(&message);
+    }
+    catch (const std::exception& e)
+    {
+        DBG_ERROR("Failed to send message: %s", e.what());
+        return -1;
+    }
 }
 
 int ipc_client_broadcast(void* pClient, 
@@ -74,15 +97,23 @@ int ipc_client_register_msg(void* pClient, unsigned short msgType)
 {
     IPCClient* pIpcClient = (IPCClient*)pClient;
 
+    if (!pIpcClient)
+    {
+        return -1;
+    }
+
+    // 重试机制：尝试注册消息类型
     int retry = 5;
     do {
-        if (pIpcClient)
+        int result = pIpcClient->RegisterMessage(msgType);
+        if (result >= 0)  // 成功
         {
-            return pIpcClient->RegisterMessage(msgType);
+            return result;
         }
         Sleep(100);
-    } while (retry--);
-    return -1;
+    } while (--retry > 0);
+    
+    return -2;  // 所有重试都失败
 }
 
 //////////////////////////////////////////////////////////////////
@@ -91,23 +122,37 @@ int ipc_client_register_msg(void* pClient, unsigned short msgType)
 void* ipc_broker_start(const char* pipe_name)
 {
     IPCServerBroker* pServerBroker = nullptr;
-    pServerBroker = new IPCServerBroker();
-    if (pServerBroker)
+    
+    try
     {
+    	pServerBroker = new IPCServerBroker();
         pServerBroker->RunBroker(pipe_name);
+    	return pServerBroker;
+	}
+    catch (const std::exception& e)
+    {
+        DBG_ERROR("Failed to start broker: %s", e.what());
+        delete pServerBroker;
+        return nullptr;
     }
-    return pServerBroker;
 }
 
 void* ipc_broker_start_async(const char* pipe_name)
 {
     IPCServerBroker* pServerBroker = nullptr;
-    pServerBroker = new IPCServerBroker();
-    if (pServerBroker)
+    
+    try
     {
+    	pServerBroker = new IPCServerBroker();
         pServerBroker->RunBrokerAsync(pipe_name);
+        return pServerBroker;
     }
-    return pServerBroker;
+    catch (const std::exception& e)
+    {
+        DBG_ERROR("Failed to start broker async: %s", e.what());
+        delete pServerBroker;
+        return nullptr;
+    }
 }
 
 void ipc_broker_stop(void* pBroker)
@@ -117,6 +162,5 @@ void ipc_broker_stop(void* pBroker)
     {
         pServerBroker->StopBroker();
         delete pServerBroker;
-        pServerBroker = nullptr;
     }
 }

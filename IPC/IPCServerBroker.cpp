@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "IPCServerBroker.h"
 
 IPCServerBroker* IPCServerBroker::pThis = nullptr;
@@ -161,18 +161,34 @@ void IPCServerBroker::SendToClient(unsigned short dstId, IpcMessage* msg)
 
 void IPCServerBroker::OnServerConnect(unsigned long index)
 {
+    if (!pThis)
+    {
+        DBG_ERROR("IPCServerBroker instance is null");
+        return;
+    }
     DBG_INFO("Client connected with index: %lu", index);
     pThis->ClientAdd(index);
 }
 
 void IPCServerBroker::OnServerDisconnect(unsigned long index)
 {
+    if (!pThis)
+    {
+        DBG_ERROR("IPCServerBroker instance is null");
+        return;
+    }
     DBG_INFO("Client disconnected with index: %lu", index);
     pThis->ClientDelete(index);
 }
 
 void IPCServerBroker::OnServerMessage(unsigned long index, void* data, size_t data_size)
 {
+    if (!pThis)
+    {
+        DBG_ERROR("IPCServerBroker instance is null");
+        return;
+    }
+
     IpcMessage* msg = (IpcMessage*)data;
 
     // Validate the message
@@ -212,14 +228,20 @@ void IPCServerBroker::OnServerMessage(unsigned long index, void* data, size_t da
         // Send to a specific client
         // Find client with the specified ID and send
         int index_dst = -1;
-        for (const auto& client : pThis->mClients)
+        
+        // 添加锁保护
         {
-            if (client.ClientId == dstId)
+            std::lock_guard<std::mutex> lock(pThis->mMutex);
+            for (const auto& client : pThis->mClients)
             {
-                index_dst = client.ClientIndex;
-                break;
+                if (client.ClientId == dstId)
+                {
+                    index_dst = client.ClientIndex;
+                    break;
+                }
             }
         }
+        
         if (index_dst == -1)
         {
             DBG_INFO("No client with ID 0x%04X found.", dstId);

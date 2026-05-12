@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "IPCServer.h"
 
 bool IPCServer::Listen(const char* pipeName,
@@ -6,6 +6,13 @@ bool IPCServer::Listen(const char* pipeName,
     PPIPE_SERVER_ON_CONNECT onConnect,
     PPIPE_SERVER_ON_DISCONNECT onDisconnect)
 {
+    // 如果已有服务器实例，先清理
+    if (pServer)
+    {
+        delete pServer;
+        pServer = nullptr;
+    }
+
 #ifdef UNICODE
     wchar_t pipeNameW[MAX_PATH];
     mbstowcs_s(nullptr, pipeNameW, MAX_PATH, pipeName, _TRUNCATE);

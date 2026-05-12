@@ -102,7 +102,7 @@ DWORD CNamedPipeServer::ConnectToNewClient(HANDLE pipe, LPOVERLAPPED overlapped,
 
 	if (connected == TRUE) 
 	{
-		return GetLastError();
+		return ERROR_SUCCESS;
 	}
 
 	switch (GetLastError()) 

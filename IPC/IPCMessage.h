@@ -75,15 +75,6 @@ struct IpcMessage
         }
         return true;
     }
-
-    //~IpcMessage()
-    //{
-    //    if (Data)
-    //    {
-    //        delete[] Data; // Free the allocated memory for data
-    //        Data = nullptr;
-    //    }
-    //}
 };
 
 typedef std::shared_ptr<IpcMessage> IpcMessagePtr;

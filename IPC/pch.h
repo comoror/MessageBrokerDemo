@@ -28,7 +28,7 @@ inline void DbgPrintf(const char* format, ...)
 	va_start(argList, format);
 
 	char szBuffer[1024] = { 0 };
-	vsprintf_s(szBuffer, format, argList);
+	_vsnprintf_s(szBuffer, sizeof(szBuffer), _TRUNCATE, format, argList);
 	va_end(argList);
 
 	OutputDebugStringA(szBuffer);

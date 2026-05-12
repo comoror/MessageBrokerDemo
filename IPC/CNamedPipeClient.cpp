@@ -177,7 +177,7 @@ DWORD CNamedPipeClient::Disconnect()
 	}
 
 	// 如果线程可 join，且不是在工作线程自身调用，则 join。
-    // 例如在 OnMessage 回调中调用 Disconnect，则不能 join 自己。
+	// 例如在 OnMessage 回调中调用 Disconnect，则不能 join 自己。
 	if (m_thread.joinable())
 	{
 		if (std::this_thread::get_id() != m_thread.get_id())
@@ -194,10 +194,9 @@ DWORD CNamedPipeClient::Disconnect()
 		else
 		{
 			// 在工作线程自身调用 Disconnect：不能 join 自己，直接返回，线程会自行退出。
-            m_thread.detach();
+			m_thread.detach();
 		}
 	}
-
 	return 0;
 }
 
