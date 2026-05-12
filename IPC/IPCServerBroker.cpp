@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "IPCServerBroker.h"
 
-IPCServerBroker::IPCServerBroker() : server(nullptr), m_pOnAuth(nullptr)
+IPCServerBroker::IPCServerBroker() : server(nullptr), m_pOnConnect(nullptr)
 {
 }
 
@@ -257,13 +257,13 @@ void IPCServerBroker::OnServerConnect(void* pContext, unsigned long index)
     DBG_INFO("Client connected with index: %lu", index);
     pThis->ClientAdd(index);
 
-    // Auth check
-    if (pThis->m_pOnAuth)
+    // OnConnect callback - caller decides whether to allow or reject
+    if (pThis->m_pOnConnect)
     {
         void* hPipe = pThis->server->GetClientHandle(index);
-        if (!pThis->m_pOnAuth(hPipe))
+        if (!pThis->m_pOnConnect(hPipe))
         {
-            DBG_WARN("WARN: Client auth failed for pipe index %lu, disconnecting.", index);
+            DBG_WARN("WARN: Client rejected for pipe index %lu, disconnecting.", index);
             pThis->ClientDelete(index);
             pThis->DisconnectClient(index);
             return;
@@ -398,9 +398,9 @@ void IPCServerBroker::OnServerMessage(void* pContext, unsigned long index, void*
     }
 }
 
-void IPCServerBroker::RunBroker(const char* serverName, PIPC_BROKER_ON_AUTH onAuth)
+void IPCServerBroker::RunBroker(const char* serverName, PIPC_BROKER_ON_CLIENT_CONNECT onConnect)
 {
-    m_pOnAuth = onAuth;
+    m_pOnConnect = onConnect;
 
     if (server)
     {
@@ -427,11 +427,11 @@ void IPCServerBroker::RunBroker(const char* serverName, PIPC_BROKER_ON_AUTH onAu
     server->Start();
 }
 
-void IPCServerBroker::RunBrokerAsync(const char* serverName, PIPC_BROKER_ON_AUTH onAuth)
+void IPCServerBroker::RunBrokerAsync(const char* serverName, PIPC_BROKER_ON_CLIENT_CONNECT onConnect)
 {
     std::string name(serverName);
-    m_brokerThread = std::thread([this, name, onAuth]() {
-        RunBroker(name.c_str(), onAuth);
+    m_brokerThread = std::thread([this, name, onConnect]() {
+        RunBroker(name.c_str(), onConnect);
     });
 }
 
