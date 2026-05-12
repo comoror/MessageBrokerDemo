@@ -2,16 +2,17 @@
 
 #include "CNamedPipeIPC.h"
 
-typedef VOID (*PPIPE_SERVER_ON_CONNECT) (DWORD pipeIndex);
-typedef VOID (*PPIPE_SERVER_ON_DISCONNECT) (DWORD pipeIndex);
-typedef VOID (*PPIPE_SERVER_ON_MESSAGE) (DWORD pipeIndex, VOID* rqstBuf, SIZE_T bufSize);
+typedef VOID (*PPIPE_SERVER_ON_CONNECT) (void* pContext, DWORD pipeIndex);
+typedef VOID (*PPIPE_SERVER_ON_DISCONNECT) (void* pContext, DWORD pipeIndex);
+typedef VOID (*PPIPE_SERVER_ON_MESSAGE) (void* pContext, DWORD pipeIndex, VOID* rqstBuf, SIZE_T bufSize);
 
 class CNamedPipeServer
 {
 public:
 	CNamedPipeServer(LPTSTR lpszPipeName, PPIPE_SERVER_ON_MESSAGE pOnMessage,
 		PPIPE_SERVER_ON_CONNECT pOnConnected = NULL,
-		PPIPE_SERVER_ON_DISCONNECT pOnDisconnected = NULL);
+		PPIPE_SERVER_ON_DISCONNECT pOnDisconnected = NULL,
+		void* pContext = nullptr);
 	~CNamedPipeServer();
 
 	//delete copy constructor and assignment operator
@@ -132,5 +133,6 @@ private:
 	PPIPE_SERVER_ON_CONNECT		m_pOnConnected = NULL;
 	PPIPE_SERVER_ON_DISCONNECT	m_pOnDisconnected = NULL;
 	PPIPE_SERVER_ON_MESSAGE		m_pOnMessage = NULL;
+	void*						m_pContext = nullptr;
 };
 

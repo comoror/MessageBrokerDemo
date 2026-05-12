@@ -1,11 +1,8 @@
 ﻿#include "pch.h"
 #include "IPCServerBroker.h"
 
-IPCServerBroker* IPCServerBroker::pThis = nullptr;
-
 IPCServerBroker::IPCServerBroker() : server(nullptr), m_pOnAuth(nullptr)
 {
-    pThis = this;
 }
 
 IPCServerBroker::~IPCServerBroker()
@@ -249,8 +246,9 @@ void IPCServerBroker::SendToClient(unsigned short dstId, IpcMessage* msg)
     }
 }
 
-void IPCServerBroker::OnServerConnect(unsigned long index)
+void IPCServerBroker::OnServerConnect(void* pContext, unsigned long index)
 {
+    IPCServerBroker* pThis = static_cast<IPCServerBroker*>(pContext);
     if (!pThis)
     {
         DBG_ERROR("IPCServerBroker instance is null");
@@ -273,8 +271,9 @@ void IPCServerBroker::OnServerConnect(unsigned long index)
     }
 }
 
-void IPCServerBroker::OnServerDisconnect(unsigned long index)
+void IPCServerBroker::OnServerDisconnect(void* pContext, unsigned long index)
 {
+    IPCServerBroker* pThis = static_cast<IPCServerBroker*>(pContext);
     if (!pThis)
     {
         DBG_ERROR("IPCServerBroker instance is null");
@@ -284,8 +283,9 @@ void IPCServerBroker::OnServerDisconnect(unsigned long index)
     pThis->ClientDelete(index);
 }
 
-void IPCServerBroker::OnServerMessage(unsigned long index, void* data, size_t data_size)
+void IPCServerBroker::OnServerMessage(void* pContext, unsigned long index, void* data, size_t data_size)
 {
+    IPCServerBroker* pThis = static_cast<IPCServerBroker*>(pContext);
     if (!pThis)
     {
         DBG_ERROR("IPCServerBroker instance is null");
@@ -383,7 +383,7 @@ void IPCServerBroker::RunBroker(const char* serverName, PIPC_BROKER_ON_AUTH onAu
         throw std::runtime_error("Failed to create IPC server instance");
     }
 
-    if (!server->Listen(serverName, OnServerMessage, OnServerConnect, OnServerDisconnect))
+    if (!server->Listen(serverName, OnServerMessage, OnServerConnect, OnServerDisconnect, this))
     {
         delete server;
         server = nullptr;

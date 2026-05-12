@@ -27,8 +27,6 @@ private:
     std::vector<ClientInfo> mClients;
     std::map<unsigned short, std::vector<ClientInfo>> mMessages;
 
-    static IPCServerBroker* pThis;
-
     void ClientAdd(unsigned long index);
     void ClientDelete(unsigned long index);
     void ClientUpdate(unsigned long index, unsigned short srcId);
@@ -43,9 +41,9 @@ private:
     void SendKick(unsigned long index, unsigned short clientId);
     void DisconnectClient(unsigned long index);
 
-    static void OnServerConnect(unsigned long index);
-    static void OnServerDisconnect(unsigned long index);
-    static void OnServerMessage(unsigned long index, void* msg, size_t data_size);
+    static void OnServerConnect(void* pContext, unsigned long index);
+    static void OnServerDisconnect(void* pContext, unsigned long index);
+    static void OnServerMessage(void* pContext, unsigned long index, void* msg, size_t data_size);
 
 public:
     void RunBroker(const char* serverName, PIPC_BROKER_ON_AUTH onAuth = nullptr);

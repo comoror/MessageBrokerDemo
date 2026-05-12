@@ -4,7 +4,8 @@
 bool IPCServer::Listen(const char* pipeName,
     PPIPE_SERVER_ON_MESSAGE onMessage,
     PPIPE_SERVER_ON_CONNECT onConnect,
-    PPIPE_SERVER_ON_DISCONNECT onDisconnect)
+    PPIPE_SERVER_ON_DISCONNECT onDisconnect,
+    void* pContext)
 {
     // 如果已有服务器实例，先清理
     if (pServer)
@@ -16,9 +17,9 @@ bool IPCServer::Listen(const char* pipeName,
 #ifdef UNICODE
     wchar_t pipeNameW[MAX_PATH];
     mbstowcs_s(nullptr, pipeNameW, MAX_PATH, pipeName, _TRUNCATE);
-    pServer = new CNamedPipeServer(pipeNameW, onMessage, onConnect, onDisconnect);
+    pServer = new CNamedPipeServer(pipeNameW, onMessage, onConnect, onDisconnect, pContext);
 #else
-    pServer = new CNamedPipeServer((char*)pipeName, onMessage, onConnect, onDisconnect);
+    pServer = new CNamedPipeServer((char*)pipeName, onMessage, onConnect, onDisconnect, pContext);
 #endif
 
     return (pServer != nullptr) ? true : false;

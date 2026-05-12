@@ -3,7 +3,8 @@
 
 CNamedPipeServer::CNamedPipeServer(LPTSTR lpszPipeName, PPIPE_SERVER_ON_MESSAGE pOnMessage,
 	PPIPE_SERVER_ON_CONNECT pOnConnected,
-	PPIPE_SERVER_ON_DISCONNECT pOnDisconnected)
+	PPIPE_SERVER_ON_DISCONNECT pOnDisconnected,
+	void* pContext)
 {
 	m_hExitEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 
@@ -11,6 +12,7 @@ CNamedPipeServer::CNamedPipeServer(LPTSTR lpszPipeName, PPIPE_SERVER_ON_MESSAGE 
 	m_pOnMessage = pOnMessage;
 	m_pOnConnected = pOnConnected;
 	m_pOnDisconnected = pOnDisconnected;
+	m_pContext = pContext;
 
 	//init the event value
 	for (int i = 0; i < nMaxPipes; i++)
@@ -369,7 +371,7 @@ void CNamedPipeServer::OnMessage(DWORD pipeIndex)
         void* msgData = m_instPipes[pipeIndex].mPipeReadBuffer;
 		size_t msgSize = m_instPipes[pipeIndex].mBytesRead;
         DBG_INFO("OnMessage: pipe %d, msgSize: %d\n", pipeIndex, msgSize);
-		m_pOnMessage(pipeIndex, msgData, msgSize);
+		m_pOnMessage(m_pContext, pipeIndex, msgData, msgSize);
 	}
 }
 
@@ -377,7 +379,7 @@ void CNamedPipeServer::OnConnected(DWORD pipeIndex)
 {
 	if (m_pOnConnected != NULL)
 	{
-		m_pOnConnected(pipeIndex);
+		m_pOnConnected(m_pContext, pipeIndex);
 	}
 }
 
@@ -385,6 +387,6 @@ void CNamedPipeServer::OnDisconnected(DWORD pipeIndex)
 {
 	if (m_pOnDisconnected != NULL)
 	{
-		m_pOnDisconnected(pipeIndex);
+		m_pOnDisconnected(m_pContext, pipeIndex);
 	}
 }

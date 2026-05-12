@@ -12,7 +12,8 @@ public:
     bool Listen(const char* pipeName,
         PPIPE_SERVER_ON_MESSAGE onMessage,
         PPIPE_SERVER_ON_CONNECT onConnect,
-        PPIPE_SERVER_ON_DISCONNECT onDisconnect);
+        PPIPE_SERVER_ON_DISCONNECT onDisconnect,
+        void* pContext = nullptr);
 
     void SendData(unsigned long index, IpcMessage* msg);
 
