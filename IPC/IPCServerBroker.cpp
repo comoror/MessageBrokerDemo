@@ -3,7 +3,7 @@
 
 IPCServerBroker* IPCServerBroker::pThis = nullptr;
 
-IPCServerBroker::IPCServerBroker() : server(nullptr)
+IPCServerBroker::IPCServerBroker() : server(nullptr), m_pOnAuth(nullptr)
 {
     pThis = this;
 }
@@ -32,11 +32,12 @@ void IPCServerBroker::ClientAdd(unsigned long index)
     mClients.push_back(info);
     DBG_INFO("Client with index %lu added.", index);
 }
+
 void IPCServerBroker::ClientDelete(unsigned long index)
 {
     std::lock_guard<std::mutex> lock(mMutex);
 
-    //remove frome clients
+    //remove from clients
     auto it = std::remove_if(mClients.begin(), mClients.end(),
         [index](const ClientInfo& client) { return client.ClientIndex == index; });
     if (it != mClients.end())
@@ -59,16 +60,62 @@ void IPCServerBroker::ClientDelete(unsigned long index)
         }
     }
 }
+
 void IPCServerBroker::ClientUpdate(unsigned long index, unsigned short srcId)
 {
-    DBG_INFO("Client [%04d] with pipe index %lu updated.", srcId, index);
-    std::lock_guard<std::mutex> lock(mMutex);
+    DBG_INFO("Client [0x%04X] with pipe index %lu updated.", srcId, index);
 
-    auto it = std::find_if(mClients.begin(), mClients.end(),
-        [index](const ClientInfo& client) { return client.ClientIndex == index; });
-    if (it != mClients.end())
+    unsigned long oldIndex = (unsigned long)-1;
+
+    // Under lock: detect duplicate, update
     {
-        it->ClientId = srcId;
+        std::lock_guard<std::mutex> lock(mMutex);
+
+        // Check if another client already has this srcId (duplicate detection)
+        auto dupIt = std::find_if(mClients.begin(), mClients.end(),
+            [index, srcId](const ClientInfo& client) {
+                return client.ClientId == srcId && client.ClientIndex != index;
+            });
+
+        if (dupIt != mClients.end())
+        {
+            // Found duplicate - record old index for kick
+            oldIndex = dupIt->ClientIndex;
+            DBG_WARN("WARN: Client [0x%04X] duplicate detected, kicking old pipe index %lu.", srcId, oldIndex);
+
+            // Remove old client from mClients
+            mClients.erase(dupIt);
+
+            // Remove old client from mMessages
+            for (auto msgIt = mMessages.begin(); msgIt != mMessages.end();)
+            {
+                msgIt->second.erase(std::remove_if(msgIt->second.begin(), msgIt->second.end(),
+                    [oldIndex](const ClientInfo& client) { return client.ClientIndex == oldIndex; }), msgIt->second.end());
+                if (msgIt->second.empty())
+                {
+                    msgIt = mMessages.erase(msgIt);
+                }
+                else
+                {
+                    msgIt++;
+                }
+            }
+        }
+
+        // Update the current client's ID
+        auto it = std::find_if(mClients.begin(), mClients.end(),
+            [index](const ClientInfo& client) { return client.ClientIndex == index; });
+        if (it != mClients.end())
+        {
+            it->ClientId = srcId;
+        }
+    }
+
+    // After lock released: send KICK and disconnect old pipe
+    if (oldIndex != (unsigned long)-1)
+    {
+        SendKick(oldIndex, srcId);
+        DisconnectClient(oldIndex);
     }
 }
 
@@ -110,9 +157,52 @@ void IPCServerBroker::SendError(unsigned long index, unsigned short srcId, void*
 {
     if (server)
     {
-        IpcMessage* msg = new IpcMessage(0, srcId, IPC_ERROR_DST_NOT_ONLINE, data, data_size);
-        server->SendData(index, msg);
-        delete msg;
+        IpcMessage msg(0, srcId, IPC_MSG_DST_NOT_FOUND, nullptr, 0);
+        server->SendData(index, &msg);
+    }
+}
+
+void IPCServerBroker::SendAck(unsigned long index, unsigned short srcId, unsigned short dstId)
+{
+    if (server)
+    {
+        IpcMessage msg(0, srcId, IPC_MSG_ACK, &dstId, sizeof(dstId));
+        server->SendData(index, &msg);
+    }
+}
+
+void IPCServerBroker::SendInvalid(unsigned long index)
+{
+    if (server)
+    {
+        IpcMessage msg(0, 0, IPC_MSG_INVALID, nullptr, 0);
+        server->SendData(index, &msg);
+    }
+}
+
+void IPCServerBroker::SendTooLarge(unsigned long index, unsigned short srcId)
+{
+    if (server)
+    {
+        IpcMessage msg(0, srcId, IPC_MSG_TOO_LARGE, nullptr, 0);
+        server->SendData(index, &msg);
+    }
+}
+
+void IPCServerBroker::SendKick(unsigned long index, unsigned short clientId)
+{
+    if (server)
+    {
+        IpcMessage msg(0, clientId, IPC_MSG_KICK, nullptr, 0);
+        server->SendData(index, &msg);
+    }
+}
+
+void IPCServerBroker::DisconnectClient(unsigned long index)
+{
+    if (server)
+    {
+        server->DisconnectClient(index);
     }
 }
 
@@ -168,6 +258,19 @@ void IPCServerBroker::OnServerConnect(unsigned long index)
     }
     DBG_INFO("Client connected with index: %lu", index);
     pThis->ClientAdd(index);
+
+    // Auth check
+    if (pThis->m_pOnAuth)
+    {
+        void* hPipe = pThis->server->GetClientHandle(index);
+        if (!pThis->m_pOnAuth(hPipe))
+        {
+            DBG_WARN("WARN: Client auth failed for pipe index %lu, disconnecting.", index);
+            pThis->ClientDelete(index);
+            pThis->DisconnectClient(index);
+            return;
+        }
+    }
 }
 
 void IPCServerBroker::OnServerDisconnect(unsigned long index)
@@ -189,12 +292,22 @@ void IPCServerBroker::OnServerMessage(unsigned long index, void* data, size_t da
         return;
     }
 
+    // Check message size too large
+    if (data_size > sizeof(IpcMessage))
+    {
+        DBG_WARN("WARN: Message too large from client index %lu, size: %zu.", index, data_size);
+        IpcMessage* oversizeMsg = (IpcMessage*)data;
+        pThis->SendTooLarge(index, oversizeMsg->header.SrcId);
+        return;
+    }
+
     IpcMessage* msg = (IpcMessage*)data;
 
-    // Validate the message
+    // Validate the message header
     if (!msg->IsValid())
     {
         DBG_INFO("Invalid message received from client index %lu.", index);
+        pThis->SendInvalid(index);
         return;
     }
 
@@ -204,17 +317,15 @@ void IPCServerBroker::OnServerMessage(unsigned long index, void* data, size_t da
 
     if (dstId == IPC_CONTROL)
     {
-        if (type == 0)  //an identifier for a client
+        if (type == IPC_MSG_REGISTER)  // Client register
         {
             // Update client information
             pThis->ClientUpdate(index, srcId);
         }
         else  // Register client to msg type
         {
-            // Register client to msg type
             pThis->MessageRegister(index, type);
         }
-
     }
     else if (dstId == IPC_BROADCAST)
     {
@@ -226,10 +337,8 @@ void IPCServerBroker::OnServerMessage(unsigned long index, void* data, size_t da
     {
         DBG_INFO("Sending message type 0x%04X from client index %lu to specific client with ID 0x%04X.", type, index, dstId);
         // Send to a specific client
-        // Find client with the specified ID and send
         int index_dst = -1;
         
-        // 添加锁保护
         {
             std::lock_guard<std::mutex> lock(pThis->mMutex);
             for (const auto& client : pThis->mClients)
@@ -246,15 +355,19 @@ void IPCServerBroker::OnServerMessage(unsigned long index, void* data, size_t da
         {
             DBG_INFO("No client with ID 0x%04X found.", dstId);
             pThis->SendError(index, srcId, data, data_size);
-
             return;
         }
+
         pThis->Send(index_dst, msg);
+        // Send ACK to the sender
+        pThis->SendAck(index, srcId, dstId);
     }
 }
 
-void IPCServerBroker::RunBroker(const char* serverName)
+void IPCServerBroker::RunBroker(const char* serverName, PIPC_BROKER_ON_AUTH onAuth)
 {
+    m_pOnAuth = onAuth;
+
     if (server)
     {
         // If server already exists, stop it first
@@ -280,10 +393,11 @@ void IPCServerBroker::RunBroker(const char* serverName)
     server->Start();
 }
 
-void IPCServerBroker::RunBrokerAsync(const char* serverName)
+void IPCServerBroker::RunBrokerAsync(const char* serverName, PIPC_BROKER_ON_AUTH onAuth)
 {
-    std::thread([this, serverName]() {
-        RunBroker(serverName);
+    std::string name(serverName);
+    std::thread([this, name, onAuth]() {
+        RunBroker(name.c_str(), onAuth);
         }).detach();
 }
 

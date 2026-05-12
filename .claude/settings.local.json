@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"e:/Work.vc/MessageBrokerDemo\" log --oneline -10)"
+    ]
+  }
+}

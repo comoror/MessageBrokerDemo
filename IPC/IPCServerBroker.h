@@ -5,6 +5,7 @@
 #include <mutex>
 #include "IPCMessage.h"
 #include "IPCServer.h"
+#include "IPC.h"
 
 typedef struct
 {
@@ -20,6 +21,7 @@ public:
 
 private:
     IPCServer* server = nullptr;
+    PIPC_BROKER_ON_AUTH m_pOnAuth = nullptr;
 
     std::mutex mMutex;
     std::vector<ClientInfo> mClients;
@@ -35,13 +37,19 @@ private:
     void Send(unsigned long index, IpcMessage* msg);
     void SendError(unsigned long index, unsigned short srcId, void* data, size_t data_size);
 
+    void SendAck(unsigned long index, unsigned short srcId, unsigned short dstId);
+    void SendInvalid(unsigned long index);
+    void SendTooLarge(unsigned long index, unsigned short srcId);
+    void SendKick(unsigned long index, unsigned short clientId);
+    void DisconnectClient(unsigned long index);
+
     static void OnServerConnect(unsigned long index);
     static void OnServerDisconnect(unsigned long index);
     static void OnServerMessage(unsigned long index, void* msg, size_t data_size);
 
 public:
-    void RunBroker(const char* serverName);
-    void RunBrokerAsync(const char* serverName);
+    void RunBroker(const char* serverName, PIPC_BROKER_ON_AUTH onAuth = nullptr);
+    void RunBrokerAsync(const char* serverName, PIPC_BROKER_ON_AUTH onAuth = nullptr);
     void StopBroker();
     void Broadcast(unsigned short type, IpcMessage* msg);
     void SendToClient(unsigned short dstId, IpcMessage* msg);

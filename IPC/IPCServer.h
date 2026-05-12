@@ -20,6 +20,10 @@ public:
 
     void Stop();
 
+    void DisconnectClient(unsigned long index);
+
+    void* GetClientHandle(unsigned long index);
+
 private:
     CNamedPipeServer* pServer = nullptr;
 };

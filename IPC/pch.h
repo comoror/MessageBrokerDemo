@@ -20,6 +20,7 @@
 #endif
 
 #define DBG_INFO(fmt, ...) DBG_LOG(fmt, __VA_ARGS__)
+#define DBG_WARN(fmt, ...) DBG_LOG(fmt, __VA_ARGS__)
 #define DBG_ERROR(fmt, ...) DBG_LOG(fmt, __VA_ARGS__)
 
 inline void DbgPrintf(const char* format, ...)

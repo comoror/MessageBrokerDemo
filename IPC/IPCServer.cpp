@@ -49,3 +49,20 @@ void IPCServer::Stop()
         pServer = nullptr;
     }
 }
+
+void IPCServer::DisconnectClient(unsigned long index)
+{
+    if (pServer)
+    {
+        pServer->ForceDisconnect(static_cast<DWORD>(index));
+    }
+}
+
+void* IPCServer::GetClientHandle(unsigned long index)
+{
+    if (pServer)
+    {
+        return pServer->GetPipeHandle(static_cast<DWORD>(index));
+    }
+    return INVALID_HANDLE_VALUE;
+}

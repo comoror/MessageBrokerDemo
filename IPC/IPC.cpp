@@ -119,14 +119,14 @@ int ipc_client_register_msg(void* pClient, unsigned short msgType)
 //////////////////////////////////////////////////////////////////
 #include "IPCServerBroker.h"
 
-void* ipc_broker_start(const char* pipe_name)
+void* ipc_broker_start(const char* pipe_name, PIPC_BROKER_ON_AUTH onAuth)
 {
     IPCServerBroker* pServerBroker = nullptr;
     
     try
     {
     	pServerBroker = new IPCServerBroker();
-        pServerBroker->RunBroker(pipe_name);
+        pServerBroker->RunBroker(pipe_name, onAuth);
     	return pServerBroker;
 	}
     catch (const std::exception& e)
@@ -137,14 +137,14 @@ void* ipc_broker_start(const char* pipe_name)
     }
 }
 
-void* ipc_broker_start_async(const char* pipe_name)
+void* ipc_broker_start_async(const char* pipe_name, PIPC_BROKER_ON_AUTH onAuth)
 {
     IPCServerBroker* pServerBroker = nullptr;
     
     try
     {
     	pServerBroker = new IPCServerBroker();
-        pServerBroker->RunBrokerAsync(pipe_name);
+        pServerBroker->RunBrokerAsync(pipe_name, onAuth);
         return pServerBroker;
     }
     catch (const std::exception& e)

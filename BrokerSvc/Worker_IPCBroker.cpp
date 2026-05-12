@@ -8,13 +8,24 @@
 
 static void* g_ipc_broker = nullptr;
 
+// Pseudo-code auth callback - always passes
+static bool OnBrokerAuth(void* hPipe)
+{
+    // TODO: Implement file signature verification
+    // ULONG pid = 0;
+    // GetNamedPipeClientProcessId((HANDLE)hPipe, &pid);
+    // std::string exePath = GetProcessPath(pid);
+    // return VerifyFileSignature(exePath);
+    return true; // Always pass (pseudo code)
+}
+
 int Worker_IPCBroker::start()
 {
     if (g_ipc_broker != nullptr) {
         LOG_WARN("IPC Broker already started.");
         return -1;
     }
-    g_ipc_broker = ipc_broker_start_async(IPC_BROKER_PIPE);
+    g_ipc_broker = ipc_broker_start_async(IPC_BROKER_PIPE, OnBrokerAuth);
 
     return g_ipc_broker == nullptr ? 1 : 0;
 }

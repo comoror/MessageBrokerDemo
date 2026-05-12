@@ -23,6 +23,8 @@ public:
 
 	DWORD SendData(DWORD pipeIndex, LPVOID data, size_t data_size);
 	VOID BroadcastData(LPVOID data, size_t data_size);
+	VOID ForceDisconnect(DWORD pipeIndex);
+	HANDLE GetPipeHandle(DWORD pipeIndex);
 
 private:
 	DWORD CreatePipeAndEvents();

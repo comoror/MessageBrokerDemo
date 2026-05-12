@@ -345,6 +345,23 @@ VOID CNamedPipeServer::BroadcastData(LPVOID msg, size_t msg_size)
 	}
 }
 
+VOID CNamedPipeServer::ForceDisconnect(DWORD pipeIndex)
+{
+	if (pipeIndex < nMaxPipes)
+	{
+		DisconnectAndReconnect(pipeIndex);
+	}
+}
+
+HANDLE CNamedPipeServer::GetPipeHandle(DWORD pipeIndex)
+{
+	if (pipeIndex < nMaxPipes)
+	{
+		return m_instPipes[pipeIndex].mPipeInstance.get();
+	}
+	return INVALID_HANDLE_VALUE;
+}
+
 void CNamedPipeServer::OnMessage(DWORD pipeIndex)
 {
 	if (m_pOnMessage != NULL)

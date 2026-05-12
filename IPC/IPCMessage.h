@@ -1,11 +1,22 @@
 #pragma once
 
+#include <windows.h>
 #include <memory>
 #include <iostream>
 
 //Destination IDs
 const unsigned short IPC_CONTROL   = 0;        // Control Message  
 const unsigned short IPC_BROADCAST = 0xFFFF;   // Broadcast to all clients
+
+// IPC internal message types (spec-defined, 0~9 reserved)
+constexpr unsigned short IPC_MSG_REGISTER      = 0;   // Client register
+constexpr unsigned short IPC_MSG_DST_NOT_FOUND = 1;   // Destination not found
+constexpr unsigned short IPC_MSG_ACK           = 2;   // Acknowledgment
+constexpr unsigned short IPC_MSG_INVALID       = 3;   // Invalid message (header verify failed)
+constexpr unsigned short IPC_MSG_TOO_LARGE     = 4;   // Message size too large
+constexpr unsigned short IPC_MSG_HEARTBEAT     = 5;   // Heartbeat
+constexpr unsigned short IPC_MSG_KICK          = 6;   // Client replaced by another with same id
+constexpr unsigned short IPC_MSG_USER_MIN      = 10;  // User-defined message types start here
 
 enum IPC_ERROR : unsigned short
 {
@@ -36,14 +47,16 @@ struct IPCHeader
 
 struct IpcMessage
 {
+    static constexpr unsigned short MAX_PAYLOAD_SIZE = 8192 - sizeof(IPCHeader);
+
     IPCHeader header;
-    unsigned char Data[2 * 4096 - sizeof(IPCHeader)];
+    unsigned char Data[MAX_PAYLOAD_SIZE];
 
     IpcMessage(unsigned short srcId, unsigned short dstId, unsigned short msgType, void* data, unsigned short dataSize)
     {
         memset(Data, 0, sizeof(Data)); // Clear the data buffer
 
-        //header.Timestamp = GetTickCount(); // Set the timestamp to current tick count
+        header.Timestamp = GetTickCount(); // Set the timestamp as msg_id
         header.SrcId = srcId; // Default source ID
         header.DstId = dstId; // Default destination ID
         header.Type = msgType; // Default message type

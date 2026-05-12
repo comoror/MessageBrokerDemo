@@ -4,6 +4,9 @@ typedef void (*PIPC_CLIENT_ON_CONNECT) ();
 typedef void (*PIPC_CLIENT_ON_DISCONNECT) ();
 typedef void (*PIPC_CLIENT_ON_MESSAGE) (void* inBuf, size_t bufSize);
 
+// Broker auth callback: receives pipe HANDLE, return true to allow, false to reject
+typedef bool (*PIPC_BROKER_ON_AUTH) (void* hPipe);
+
 extern "C"
 {
     //return: pointer to IPCClient instance, nullptr if failed
@@ -32,7 +35,7 @@ extern "C"
         unsigned short msgType);
 
     //return: pointer to IPCServerBroker instance, nullptr if failed
-    void* ipc_broker_start(const char* pipe_name);
-    void* ipc_broker_start_async(const char* pipe_name);
+    void* ipc_broker_start(const char* pipe_name, PIPC_BROKER_ON_AUTH onAuth = nullptr);
+    void* ipc_broker_start_async(const char* pipe_name, PIPC_BROKER_ON_AUTH onAuth = nullptr);
     void ipc_broker_stop(void* pBroker);
 }
