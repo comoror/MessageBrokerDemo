@@ -10,7 +10,7 @@ typedef VOID (*PPIPE_SERVER_ON_MESSAGE) (void* pContext, DWORD pipeIndex, VOID* 
 class CNamedPipeServer
 {
 public:
-	CNamedPipeServer(LPTSTR lpszPipeName, PPIPE_SERVER_ON_MESSAGE pOnMessage,
+	CNamedPipeServer(LPCTSTR lpszPipeName, PPIPE_SERVER_ON_MESSAGE pOnMessage,
 		PPIPE_SERVER_ON_CONNECT pOnConnected = NULL,
 		PPIPE_SERVER_ON_DISCONNECT pOnDisconnected = NULL,
 		void* pContext = nullptr);

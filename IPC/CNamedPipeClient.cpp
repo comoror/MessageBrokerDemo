@@ -5,12 +5,25 @@ CNamedPipeClient::CNamedPipeClient()
 {
 	m_hEventExit = CreateEvent(NULL, TRUE, FALSE, NULL);
 	m_hEventRead = CreateEvent(NULL, TRUE/*Manual-Reset*/, FALSE, NULL);
+	m_hEventThreadDone = CreateEvent(NULL, TRUE, TRUE, NULL); // Initially signaled (no thread running)
 
 	m_ovRead.hEvent = m_hEventRead;
 }
 
 CNamedPipeClient::~CNamedPipeClient()
 {
+	// Signal the worker thread to exit
+	if (m_hEventExit != NULL)
+	{
+		SetEvent(m_hEventExit);
+	}
+
+	// Wait for the worker thread to finish (handles detached thread case)
+	if (m_hEventThreadDone != NULL)
+	{
+		WaitForSingleObject(m_hEventThreadDone, 5000);
+	}
+
 	if (m_hPipe != INVALID_HANDLE_VALUE)
 	{
 		CloseHandle(m_hPipe);
@@ -27,6 +40,12 @@ CNamedPipeClient::~CNamedPipeClient()
 	{
 		CloseHandle(m_hEventRead);
 		m_hEventRead = NULL;
+	}
+
+	if (m_hEventThreadDone != NULL)
+	{
+		CloseHandle(m_hEventThreadDone);
+		m_hEventThreadDone = NULL;
 	}
 }
 
@@ -108,6 +127,7 @@ DWORD CNamedPipeClient::Connect(LPCTSTR lpszPipeName, PPIPE_CLIENT_ON_MESSAGE pO
 	}
 
 	// Create a thread for this client.
+	ResetEvent(m_hEventThreadDone);
 	m_thread = std::thread([=]() {
 
 		HANDLE hEvents[2] = { m_hEventExit, m_ovRead.hEvent };
@@ -163,6 +183,9 @@ DWORD CNamedPipeClient::Connect(LPCTSTR lpszPipeName, PPIPE_CLIENT_ON_MESSAGE pO
 		{
 			m_pOnDisconnect();
 		}
+
+		// Signal that the thread is done (must be last action before exit)
+		SetEvent(m_hEventThreadDone);
 
 		});
 

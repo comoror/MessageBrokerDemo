@@ -19,7 +19,7 @@ bool IPCServer::Listen(const char* pipeName,
     mbstowcs_s(nullptr, pipeNameW, MAX_PATH, pipeName, _TRUNCATE);
     pServer = new(std::nothrow) CNamedPipeServer(pipeNameW, onMessage, onConnect, onDisconnect, pContext);
 #else
-    pServer = new(std::nothrow) CNamedPipeServer((char*)pipeName, onMessage, onConnect, onDisconnect, pContext);
+    pServer = new(std::nothrow) CNamedPipeServer(pipeName, onMessage, onConnect, onDisconnect, pContext);
 #endif
 
     return (pServer != nullptr);

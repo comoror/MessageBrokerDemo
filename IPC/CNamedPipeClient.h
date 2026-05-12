@@ -30,6 +30,7 @@ private:
 	HANDLE				m_hPipe = INVALID_HANDLE_VALUE;
 	HANDLE				m_hEventExit = NULL;
 	HANDLE				m_hEventRead = NULL;
+	HANDLE				m_hEventThreadDone = NULL;
 
 	OVERLAPPED			m_ovRead = { 0 };
 	BOOL				m_bPendingIO = FALSE;

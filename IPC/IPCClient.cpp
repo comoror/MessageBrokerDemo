@@ -13,7 +13,11 @@ bool IPCClient::Connect(const char* pipeName, PPIPE_CLIENT_ON_MESSAGE onMessage,
     PPIPE_CLIENT_ON_CONNECT onConnect,
     PPIPE_CLIENT_ON_DISCONNECT onDisconnect)
 {
-    pClient = new CNamedPipeClient();
+    pClient = new(std::nothrow) CNamedPipeClient();
+    if (!pClient)
+    {
+        return false;
+    }
 #ifdef UNICODE
     wchar_t pipeNameW[MAX_PATH];
     mbstowcs_s(nullptr, pipeNameW, MAX_PATH, pipeName, _TRUNCATE);

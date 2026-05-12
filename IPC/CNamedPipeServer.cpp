@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "CNamedPipeServer.h"
 
-CNamedPipeServer::CNamedPipeServer(LPTSTR lpszPipeName, PPIPE_SERVER_ON_MESSAGE pOnMessage,
+CNamedPipeServer::CNamedPipeServer(LPCTSTR lpszPipeName, PPIPE_SERVER_ON_MESSAGE pOnMessage,
 	PPIPE_SERVER_ON_CONNECT pOnConnected,
 	PPIPE_SERVER_ON_DISCONNECT pOnDisconnected,
 	void* pContext)
@@ -55,6 +55,18 @@ DWORD CNamedPipeServer::Run()
 	while (1)
 	{
 		DWORD dwWaitResult = WaitForMultipleObjects(nMaxEvents, m_hEvents, FALSE, INFINITE);
+
+		if (dwWaitResult == WAIT_FAILED)
+		{
+			DBG_ERROR("WaitForMultipleObjects failed. GLE=%d\n", GetLastError());
+			break;
+		}
+
+		if (dwWaitResult < WAIT_OBJECT_0 || dwWaitResult >= WAIT_OBJECT_0 + nMaxEvents)
+		{
+			DBG_ERROR("WaitForMultipleObjects unexpected result: %d\n", dwWaitResult);
+			continue;
+		}
 
 		DWORD i = dwWaitResult - WAIT_OBJECT_0;
 		if (i == nMaxPipes) //exit event
