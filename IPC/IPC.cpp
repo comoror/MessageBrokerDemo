@@ -149,3 +149,183 @@ void ipc_broker_stop(IPC_BROKER_HANDLE pBroker)
         delete pServerBroker;
     }
 }
+
+//////////////////////////////////////////////////////////////////
+// Raw Named Pipe API
+//////////////////////////////////////////////////////////////////
+#include "CNamedPipeServer.h"
+#include "CNamedPipeClient.h"
+
+struct PipeServerWrapper
+{
+    CNamedPipeServer* pServer = nullptr;
+    std::thread serverThread;
+
+    ~PipeServerWrapper()
+    {
+        if (pServer)
+        {
+            pServer->Stop();
+            if (serverThread.joinable())
+            {
+                serverThread.join();
+            }
+            delete pServer;
+            pServer = nullptr;
+        }
+    }
+};
+
+IPC_PIPE_SERVER_HANDLE ipc_pipe_server_start(const char* pipe_name,
+    PIPC_PIPE_ON_MESSAGE onMessage,
+    PIPC_PIPE_ON_CONNECT onConnect,
+    PIPC_PIPE_ON_DISCONNECT onDisconnect,
+    void* context)
+{
+    if (!pipe_name || !onMessage)
+    {
+        return nullptr;
+    }
+
+    PipeServerWrapper* pWrapper = new(std::nothrow) PipeServerWrapper();
+    if (!pWrapper)
+    {
+        return nullptr;
+    }
+
+#ifdef UNICODE
+    wchar_t pipeNameW[MAX_PATH];
+    mbstowcs_s(nullptr, pipeNameW, MAX_PATH, pipe_name, _TRUNCATE);
+    pWrapper->pServer = new(std::nothrow) CNamedPipeServer(pipeNameW,
+        (PPIPE_SERVER_ON_MESSAGE)onMessage,
+        (PPIPE_SERVER_ON_CONNECT)onConnect,
+        (PPIPE_SERVER_ON_DISCONNECT)onDisconnect,
+        context);
+#else
+    pWrapper->pServer = new(std::nothrow) CNamedPipeServer(pipe_name,
+        (PPIPE_SERVER_ON_MESSAGE)onMessage,
+        (PPIPE_SERVER_ON_CONNECT)onConnect,
+        (PPIPE_SERVER_ON_DISCONNECT)onDisconnect,
+        context);
+#endif
+
+    if (!pWrapper->pServer)
+    {
+        delete pWrapper;
+        return nullptr;
+    }
+
+    // Run server in background thread
+    pWrapper->serverThread = std::thread([pWrapper]() {
+        pWrapper->pServer->Run();
+    });
+
+    return pWrapper;
+}
+
+IPC_RESULT ipc_pipe_server_send(IPC_PIPE_SERVER_HANDLE hServer,
+    unsigned long pipeIndex,
+    void* data, size_t data_size)
+{
+    PipeServerWrapper* pWrapper = (PipeServerWrapper*)hServer;
+    if (!pWrapper || !pWrapper->pServer || !data || data_size == 0)
+    {
+        return IPC_ERR_INVALID_PARAM;
+    }
+
+    DWORD ret = pWrapper->pServer->SendData((DWORD)pipeIndex, data, data_size);
+    return (ret == 0) ? IPC_OK : IPC_ERR_SEND_FAILED;
+}
+
+void ipc_pipe_server_broadcast(IPC_PIPE_SERVER_HANDLE hServer,
+    void* data, size_t data_size)
+{
+    PipeServerWrapper* pWrapper = (PipeServerWrapper*)hServer;
+    if (!pWrapper || !pWrapper->pServer || !data || data_size == 0)
+    {
+        return;
+    }
+    pWrapper->pServer->BroadcastData(data, data_size);
+}
+
+void ipc_pipe_server_disconnect_client(IPC_PIPE_SERVER_HANDLE hServer,
+    unsigned long pipeIndex)
+{
+    PipeServerWrapper* pWrapper = (PipeServerWrapper*)hServer;
+    if (!pWrapper || !pWrapper->pServer)
+    {
+        return;
+    }
+    pWrapper->pServer->ForceDisconnect((DWORD)pipeIndex);
+}
+
+void ipc_pipe_server_stop(IPC_PIPE_SERVER_HANDLE hServer)
+{
+    PipeServerWrapper* pWrapper = (PipeServerWrapper*)hServer;
+    if (pWrapper)
+    {
+        delete pWrapper;  // Destructor handles Stop + join + cleanup
+    }
+}
+
+IPC_PIPE_CLIENT_HANDLE ipc_pipe_client_connect(const char* pipe_name,
+    PIPC_PIPE_CLIENT_ON_MESSAGE onMessage,
+    PIPC_PIPE_CLIENT_ON_CONNECT onConnect,
+    PIPC_PIPE_CLIENT_ON_DISCONNECT onDisconnect)
+{
+    if (!pipe_name || !onMessage)
+    {
+        return nullptr;
+    }
+
+    CNamedPipeClient* pClient = new(std::nothrow) CNamedPipeClient();
+    if (!pClient)
+    {
+        return nullptr;
+    }
+
+#ifdef UNICODE
+    wchar_t pipeNameW[MAX_PATH];
+    mbstowcs_s(nullptr, pipeNameW, MAX_PATH, pipe_name, _TRUNCATE);
+    DWORD ret = pClient->Connect(pipeNameW,
+        (PPIPE_CLIENT_ON_MESSAGE)onMessage,
+        (PPIPE_CLIENT_ON_CONNECT)onConnect,
+        (PPIPE_CLIENT_ON_DISCONNECT)onDisconnect);
+#else
+    DWORD ret = pClient->Connect(pipe_name,
+        (PPIPE_CLIENT_ON_MESSAGE)onMessage,
+        (PPIPE_CLIENT_ON_CONNECT)onConnect,
+        (PPIPE_CLIENT_ON_DISCONNECT)onDisconnect);
+#endif
+
+    if (ret != ERROR_SUCCESS)
+    {
+        delete pClient;
+        return nullptr;
+    }
+
+    return pClient;
+}
+
+IPC_RESULT ipc_pipe_client_send(IPC_PIPE_CLIENT_HANDLE hClient,
+    void* data, size_t data_size)
+{
+    CNamedPipeClient* pClient = (CNamedPipeClient*)hClient;
+    if (!pClient || !data || data_size == 0)
+    {
+        return IPC_ERR_INVALID_PARAM;
+    }
+
+    DWORD ret = pClient->SendData(data, (DWORD)data_size);
+    return (ret == 0) ? IPC_OK : IPC_ERR_SEND_FAILED;
+}
+
+void ipc_pipe_client_disconnect(IPC_PIPE_CLIENT_HANDLE hClient)
+{
+    CNamedPipeClient* pClient = (CNamedPipeClient*)hClient;
+    if (pClient)
+    {
+        pClient->Disconnect();
+        delete pClient;
+    }
+}

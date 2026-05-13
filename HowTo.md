@@ -352,3 +352,156 @@ int main()
 - `OnMessage` 回调在工作线程中被调用 — 若访问共享状态需自行保证线程安全。
 - `OnConnect` 回调在管道连接建立时触发，接收原始管道 `HANDLE`，可通过 `GetNamedPipeClientProcessId` 获取客户端 PID 进行签名验证。
 - `OnAuth` 回调在客户端注册时触发，接收管道 `HANDLE` 和 `clientId`，可做基于 ID 的白名单校验。
+
+---
+
+## 第六部分：Raw Named Pipe API（无协议直连）
+
+如果不需要 Broker 的消息路由功能，可以直接使用原始命名管道 API 进行点对点通信。此模式下：
+- 没有 IPC 协议头（`IPCHeader`），收发的是纯裸字节
+- 没有消息路由，Server 和 Client 直接通信
+- Server 最多支持 16 个并发客户端连接
+- 每个客户端通过 `pipeIndex`（0~15）标识
+
+### 头文件
+
+```cpp
+#include "IPC.h"    // 只需要这一个头文件
+```
+
+不需要 `IPCMessage.h`。
+
+### Server 端
+
+```cpp
+#define PIPE_NAME "\\\\.\\pipe\\MyRawPipe"
+
+// 收到客户端数据
+void OnMessage(void* context, unsigned long pipeIndex, void* data, size_t size)
+{
+    printf("Pipe[%lu] 收到 %zu 字节\n", pipeIndex, size);
+
+    // 回复客户端
+    const char* reply = "ACK";
+    ipc_pipe_server_send(context, pipeIndex, (void*)reply, 3);
+}
+
+// 客户端连接
+void OnConnect(void* context, unsigned long pipeIndex)
+{
+    printf("Pipe[%lu] 客户端已连接\n", pipeIndex);
+}
+
+// 客户端断开
+void OnDisconnect(void* context, unsigned long pipeIndex)
+{
+    printf("Pipe[%lu] 客户端已断开\n", pipeIndex);
+}
+
+int main()
+{
+    // 启动服务端（非阻塞，后台线程运行）
+    // context 参数会传递给所有回调函数
+    IPC_PIPE_SERVER_HANDLE hServer = ipc_pipe_server_start(
+        PIPE_NAME,
+        OnMessage,
+        OnConnect,       // 可选，可传 nullptr
+        OnDisconnect,    // 可选，可传 nullptr
+        nullptr          // context，可传自定义上下文指针
+    );
+
+    if (!hServer)
+    {
+        printf("Server 启动失败\n");
+        return -1;
+    }
+
+    printf("Server 运行中，按 Enter 停止。\n");
+    getchar();
+
+    // 停止并释放
+    ipc_pipe_server_stop(hServer);
+    return 0;
+}
+```
+
+### Client 端
+
+```cpp
+#define PIPE_NAME "\\\\.\\pipe\\MyRawPipe"
+
+void OnData(void* data, size_t size)
+{
+    printf("收到 %zu 字节: %.*s\n", size, (int)size, (char*)data);
+}
+
+void OnConnected()
+{
+    printf("已连接到 Server\n");
+}
+
+void OnDisconnected()
+{
+    printf("与 Server 断开\n");
+}
+
+int main()
+{
+    // 连接到服务端（非阻塞，读取线程在后台运行）
+    IPC_PIPE_CLIENT_HANDLE hClient = ipc_pipe_client_connect(
+        PIPE_NAME,
+        OnData,
+        OnConnected,     // 可选，可传 nullptr
+        OnDisconnected   // 可选，可传 nullptr
+    );
+
+    if (!hClient)
+    {
+        printf("连接失败\n");
+        return -1;
+    }
+
+    // 发送数据
+    const char* msg = "Hello Server";
+    IPC_RESULT ret = ipc_pipe_client_send(hClient, (void*)msg, strlen(msg));
+    if (ret != IPC_OK)
+    {
+        printf("发送失败: %d\n", ret);
+    }
+
+    getchar();
+
+    // 断开并释放
+    ipc_pipe_client_disconnect(hClient);
+    return 0;
+}
+```
+
+### Server API 参考
+
+| 函数 | 说明 |
+|------|------|
+| `ipc_pipe_server_start` | 创建并启动管道服务端（后台线程），返回句柄 |
+| `ipc_pipe_server_send` | 向指定 `pipeIndex` 的客户端发送数据 |
+| `ipc_pipe_server_broadcast` | 向所有已连接客户端广播数据 |
+| `ipc_pipe_server_disconnect_client` | 强制断开指定客户端 |
+| `ipc_pipe_server_stop` | 停止服务端并释放所有资源 |
+
+### Client API 参考
+
+| 函数 | 说明 |
+|------|------|
+| `ipc_pipe_client_connect` | 连接到管道服务端，返回句柄 |
+| `ipc_pipe_client_send` | 向服务端发送数据 |
+| `ipc_pipe_client_disconnect` | 断开连接并释放资源 |
+
+### Raw Pipe vs Broker 模式对比
+
+| | Raw Pipe | Broker 模式 |
+|---|---|---|
+| 协议头 | 无 | 有（IPCHeader，含签名、路由信息） |
+| 消息路由 | 无，Server 和 Client 直连 | Broker 自动路由（单播/广播） |
+| 客户端寻址 | 通过 `pipeIndex`（连接顺序） | 通过 `client_id`（逻辑标识） |
+| 认证 | 无内置机制 | `OnConnect`/`OnAuth` 回调 |
+| 广播 | Server 手动 broadcast | 基于注册的消息类型定向广播 |
+| 适用场景 | 简单 1:N 通信、自定义协议 | 多客户端消息总线、需要路由和认证 |
