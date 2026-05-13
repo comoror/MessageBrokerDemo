@@ -25,12 +25,10 @@ msg_type
     //0~9, reserved for internal use
     0,  //client register
     1,  //dst not found
-    2,  //reserved
+    2,  //kick: client replaced by another with same id
     3,  //invalid message, header verify failed
     4,  //msg size too large
-    5,  //heartbeat
-    6,  //kick: client replaced by another with same id
-    7~9,  //reserved
+    5~9,  //reserved
     10~0xFFFF,  //user define         
 }
 
