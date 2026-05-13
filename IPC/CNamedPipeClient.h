@@ -25,6 +25,7 @@ private:
 	VOID OnMessage(LPVOID data, DWORD data_size);
 
 	BYTE						m_PipeReadBuffer[MAX_PIPE_BUFFER_SIZE] = { 0 };
+	DWORD						m_dwBytesRead = 0;
 
 private:
 	HANDLE				m_hPipe = INVALID_HANDLE_VALUE;

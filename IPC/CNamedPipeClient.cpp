@@ -134,7 +134,12 @@ DWORD CNamedPipeClient::Connect(LPCTSTR lpszPipeName, PPIPE_CLIENT_ON_MESSAGE pO
 
 		while (1)
 		{
-			ReadPipe();
+			DWORD dwReadErr = ReadPipe();
+			if (dwReadErr != 0)
+			{
+				// Pipe is broken or other read error
+				break;
+			}
 
 			DWORD dwRes = WaitForMultipleObjects(2, hEvents, FALSE, INFINITE);
 			if (dwRes == WAIT_OBJECT_0)
@@ -172,9 +177,9 @@ DWORD CNamedPipeClient::Connect(LPCTSTR lpszPipeName, PPIPE_CLIENT_ON_MESSAGE pO
 				}
 				else
 				{
-					//read completed
-					DBG_INFO("Read successfully completed.\n");
-					OnMessage(m_PipeReadBuffer, MAX_PIPE_BUFFER_SIZE);
+					//read completed synchronously
+					DBG_INFO("Read successfully completed, bytesRead: %d.\n", m_dwBytesRead);
+					OnMessage(m_PipeReadBuffer, m_dwBytesRead);
 				}
 			}
 		}
@@ -281,12 +286,13 @@ DWORD CNamedPipeClient::ReadPipe()
 {
 	memset(m_PipeReadBuffer, 0, MAX_PIPE_BUFFER_SIZE);
 
-	DWORD dwRead;
+	DWORD dwRead = 0;
 	BOOL bRead = ReadFile(m_hPipe, m_PipeReadBuffer, MAX_PIPE_BUFFER_SIZE, &dwRead, &m_ovRead);
 	if (bRead)
 	{
 		//read completed
 		m_bPendingIO = FALSE;
+		m_dwBytesRead = dwRead;
 	}
 	else
 	{

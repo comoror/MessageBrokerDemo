@@ -357,6 +357,10 @@ DWORD CNamedPipeServer::WritePipe(DWORD pipeIndex, LPVOID msg, size_t msg_size)
 
 DWORD CNamedPipeServer::SendData(DWORD pipeIndex, LPVOID msg, size_t msg_size)
 {
+	if (pipeIndex >= nMaxPipes)
+	{
+		return ERROR_INVALID_PARAMETER;
+	}
 	return WritePipe(pipeIndex, msg, msg_size);
 }
 
